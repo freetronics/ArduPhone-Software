@@ -36,6 +36,8 @@ to experiment with your ArduPhone.
 
 Some of the examples require external libraries, as linked above.
 
+ * ArduPhoneButtonTest. Detects keypresses on the matrix keypad and
+   reports them via the serial monitor.
  * ArduPhoneCountdown. Test of the OLED screen.
  * ArduPhoneOLED. Test of the OLED screen.
  * ArduPhoneSerialProxy. Opens a serial connection to both the
