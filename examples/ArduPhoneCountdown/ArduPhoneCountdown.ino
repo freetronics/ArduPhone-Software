@@ -20,6 +20,7 @@ int counter = COUNTDOWN_FROM;
 void setup() {
   Serial.begin(115200);
   oled.begin();
+  oled.setOrientation(ROTATE_180);
   oled.selectFont(Droid_Sans_24);
   box.setForegroundColour(LIMEGREEN);
 }
