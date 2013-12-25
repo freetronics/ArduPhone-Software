@@ -8,7 +8,7 @@
  * Normally only need to run this once if the GSM module has for any reason been re/set back
  * to factory firmware defaults.
  *
- * Use the serial monitor set at 9600 baud to monitor the output of these changes
+ * Use the serial monitor set at 38400 baud to monitor the output of these changes
  * - Serial  = USB serial UART
  * - Serial1 = GSM module serial UART
  */
@@ -37,7 +37,7 @@ void setup() {
   digitalWrite( GsmSense1v8, HIGH ); // turn on internal pull-up resistor
  
   // Open USB serial 
-  Serial.begin( 9600 );
+  Serial.begin( 38400 );
   
   // Initially communicate at GSM module default rate
   Serial1.begin( 115200 );
@@ -58,14 +58,14 @@ void setup() {
   
   // Turn on ECHO
   Serial.print( "Turn off echo: " );
-  Serial1.println( "ATE0" );
+  Serial1.print( "ATE0\r" );
   // Output any messages from module
   OutputSerail1ToSerial( 1000 );
   Serial.println( "DONE" );
   
   // Change baud rate
   Serial.print( "Changing baud rate to 9600: " );
-  Serial1.println( "AT+IPR=9600" );
+  Serial1.print( "AT+IPR=9600\r" );
   // Output any messages from module
   OutputSerail1ToSerial( 1000 );
   Serial.println( "DONE" );
@@ -75,14 +75,14 @@ void setup() {
   
   // Write as default setting
   Serial.print( "Saving as default setting: " );
-  Serial1.println( "AT&W" );
+  Serial1.print( "AT&W\r" );
   // Output any messages from module
   OutputSerail1ToSerial( 1000 );
   Serial.println( "DONE" );
 
   // Check communicating successfully now
   Serial.print( "Sending 'AT' command, expect 'OK': " );
-  Serial1.println( "AT" );
+  Serial1.print( "AT\r" );
   // Output any messages from module
   OutputSerail1ToSerial( 2000 );
   Serial.println( "DONE" );

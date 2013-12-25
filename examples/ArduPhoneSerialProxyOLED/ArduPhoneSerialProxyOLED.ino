@@ -29,7 +29,7 @@ void setup() {
   oled.begin();
   oled.setOrientation(ROTATE_180);
   oled.selectFont(SystemFont5x7);
-  Serial.begin(9600);
+  Serial.begin(38400);
   //Serial1.begin(115200);
   Serial1.begin(9600);
   Serial.print("Ready: ");
@@ -53,6 +53,8 @@ void setup() {
   Serial1.println("AT+IPR=9600");
   Serial.println("Done");
   Serial1.begin(9600);
+
+  delay(2000);
   
   Serial1.print("AT\r");
   Serial.print("Ready");
