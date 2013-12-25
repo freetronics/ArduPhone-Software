@@ -13,8 +13,10 @@
  * - Serial1 = GSM module serial UART
  */
 
+// Function prototype
 void OutputSerail1ToSerial( int waitTime );
 
+// GSM module pins
 int GsmReady    = 18;
 int GsmOnKey    = 19;
 int GsmNetOk    = 20;
@@ -38,7 +40,7 @@ void setup() {
   Serial.begin( 9600 );
   
   // Initially communicate at GSM module default rate
-  Serial1.begin( 9600 );
+  Serial1.begin( 115200 );
 
   // Let user know we're alive
   Serial.println( "== ArduPhoneGSMSetBaudRate ==" );
