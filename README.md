@@ -36,13 +36,14 @@ to experiment with your ArduPhone.
 
 Some of the examples require external libraries, as linked above.
 
- * ArduPhoneButtonTest. Detects keypresses on the matrix keypad and
+ * ArduPhoneButtonTest: Detects keypresses on the matrix keypad and
    reports them via the serial monitor.
- * ArduPhoneCountdown. Test of the OLED screen.
- * ArduPhoneOLED. Test of the OLED screen.
- * ArduPhoneSerialProxy. Opens a serial connection to both the
+ * ArduPhoneOLEDCountdown: Test of the OLED screen.
+ * ArduPhoneSerialProxy: Opens a serial connection to both the
    ADH8066 GSM module and to the host PC via USB. Anything typed
    into the serial monitor will be relayed to the GSM module, and
    vice versa.
- * ArduPhoneSerialProxyOLED. Same as the ArduPhoneSerialProxy example,
+ * ArduPhoneSerialProxyOLED: Same as the ArduPhoneSerialProxy example,
    but also displays messages sent and received on the OLED display.
+ * ArduPhoneSetGSMBaudRate: Used to set the default baud rate the GSM 
+   module communicates with. 
