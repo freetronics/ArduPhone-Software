@@ -4,7 +4,7 @@
 #include <fonts/Droid_Sans_24.h>
 
 /*
- * Countdown on a scrolling screen using a large font
+ * Countdown using OLED on a scrolling screen using a large font
  */
 
 const byte pin_cs = 4;
