@@ -11,7 +11,7 @@
 
 const byte KEYPAD_ROWS = 6 ;
 const byte KEYPAD_COLS = 3 ;
-const byte checkKeyPeriod = 5 ; // in ms
+const byte CHECK_KEY_PERIOD = 5 ; // in ms
 
 // === States ===
 
@@ -40,7 +40,7 @@ unsigned long lastCheckKeyTime ;
 // === Functions ===
 
 void checkKeyPressed() {
-  if ( ( sliceStartTime - lastCheckKeyTime ) > checkKeyPeriod ) {
+  if ( ( sliceStartTime - lastCheckKeyTime ) > CHECK_KEY_PERIOD ) {
     char key = keypad.getKey() ;
     if ( key ) Serial.println( key ) ;
     lastCheckKeyTime = sliceStartTime ;
@@ -50,7 +50,7 @@ void checkKeyPressed() {
 // =======================
 
 void KeypadSetup() {
-  keypadState = keypad_UNINITIALISED ;
+  keypadState = KEYPAD_UNINITIALISED ;
 }
 
 // =======================
