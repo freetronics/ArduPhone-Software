@@ -49,11 +49,9 @@ screenStates screenState ;
 
 OLED oled( OLED_PIN_CS, OLED_PIN_DC, OLED_PIN_RESET ) ;
 unsigned long lastScreenTime ;
-byte statusActivityFrame = 0 ;
 byte sineIndex [ SINE_FRAMES ] = { 0, 1, 2, 4, 6, 7, 8, 7, 6, 4, 2, 1 } ;
 byte activityIndexX = 0 ;
 byte activityIndexY = SINE_FRAMES / 2 ;
-boolean activityOrder = false ;
 
 // === Functions ===
 
