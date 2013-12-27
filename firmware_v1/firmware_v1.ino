@@ -1,6 +1,6 @@
 /*
  * Freetronics ArduPhone - firmware_v1
- * Initial firmware to support functions similar to a basic mobile phone.
+ * - Initial firmware to support functions similar to a basic mobile phone.
  *
  * Requires
  * - Freetronics / FTOLED library from Github to support the 128x128 OLED display

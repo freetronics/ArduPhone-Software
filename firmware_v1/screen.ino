@@ -6,7 +6,6 @@
  * Cary Dreelan - Dec 2013
  */
 
-
 // === Constants ===
 
 const byte OLED_PIN_CS = 4 ;
