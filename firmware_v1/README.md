@@ -74,7 +74,7 @@ implemented:
  * Power on of GSM module and status bar reporting of each step
  * Activity animation showing main loop is running (top right of
    status bar)
- * USB Serial UART debug and time slice stats
+ * USB Serial UART debug and time slice stats (38400 in serial monitor)
  * Initial (incomplete) GSM enquiry and multi-tasking receive handling
  * GSM module status; from powering on to idle
  * Signal strength enquiry and graphing in status bar
@@ -109,7 +109,7 @@ available will be addressed.
 Problems
 --------
 
-Some issues have been noted with both Serial (USB Serial UART) and 
+Some issues have been noted when both Serial (USB Serial UART) and 
 Serial1 (GSM module UART) are used at the same time. It appears
 they are interfering with each other and scrambling communications.
 This has mainly been noted if using the USB serial UART for debug
