@@ -28,7 +28,10 @@ enum uiStates {
   UI_UNINITIALISED,
   UI_START_UP,
   UI_DRAW_MAIN_MENU,
-  UI_MAIN_MENU
+  UI_MAIN_MENU,
+  UI_MAKE_CALL,
+  UI_CREATE_SMS,
+  UI_LOCK_KEYS
 } ;
 uiStates uiState ;
 
@@ -39,14 +42,14 @@ byte startupFrameNum = 0 ;
 // Main menu variables - these next 3 items and their arrays must be in sync
 prog_char mainMenu0[] PROGMEM = "Call";
 prog_char mainMenu1[] PROGMEM = "SMS";
-prog_char mainMenu2[] PROGMEM = "Lock";
-prog_char mainMenu3[] PROGMEM = "Three";
-prog_char mainMenu4[] PROGMEM = "Four";
-prog_char mainMenu5[] PROGMEM = "Five";
-prog_char mainMenu6[] PROGMEM = "Six";
-prog_char mainMenu7[] PROGMEM = "Seven";
-prog_char mainMenu8[] PROGMEM = "Eight";
-prog_char mainMenu9[] PROGMEM = "Nine";
+prog_char mainMenu2[] PROGMEM = "Lock keys";
+prog_char mainMenu3[] PROGMEM = "Four";
+prog_char mainMenu4[] PROGMEM = "Five";
+prog_char mainMenu5[] PROGMEM = "Six";
+prog_char mainMenu6[] PROGMEM = "Seven";
+prog_char mainMenu7[] PROGMEM = "Eight";
+prog_char mainMenu8[] PROGMEM = "Nine";
+prog_char mainMenu9[] PROGMEM = "Ten";
 const byte MAIN_MENU_NUM_ITEMS = 10 ;
 PROGMEM const char * main_menu_table[] = {
   mainMenu0,
@@ -61,10 +64,10 @@ PROGMEM const char * main_menu_table[] = {
   mainMenu9
 } ;
 typedef void ( * FunctionPointer ) ();
-PROGMEM FunctionPointer main_menu_functions[] = {
+FunctionPointer main_menu_functions[] = {
   callMenuItem,
   smsMenuItem,
-  lockMenuItem,
+  lockKeysMenuItem,
   0,
   0,
   0,
@@ -78,10 +81,51 @@ byte curMenuItem, lastMenuItem = 0 ;
 // === Functions ===
 
 void callMenuItem() {
+  uiState = UI_MAKE_CALL ;
+  // Temp display message to show function was selected
+  nextUITime = sliceStartTime + 1500 ;
+  oled.drawFilledBox( MF_MIN_X, MF_MIN_Y, MF_MAX_X, MF_MAX_Y, MAIN_MENU_BG_COLOUR ) ;
+  oled.selectFont( Arial_Black_16 ) ;
+  oled.drawString( 20, 50, F("Make Call"), STARTUP_FG_COLOUR, STARTUP_BG_COLOUR ) ;
 }
+
+void handleMakeCall () {
+  if ( sliceStartTime >= nextUITime ) {
+    // Temp return to main menu
+    uiState = UI_DRAW_MAIN_MENU ;
+  }
+}
+
 void smsMenuItem() {
+  uiState = UI_CREATE_SMS ;
+  // Temp display message to show function was selected
+  nextUITime = sliceStartTime + 1500 ;
+  oled.drawFilledBox( MF_MIN_X, MF_MIN_Y, MF_MAX_X, MF_MAX_Y, MAIN_MENU_BG_COLOUR ) ;
+  oled.selectFont( Arial_Black_16 ) ;
+  oled.drawString( 15, 50, F("Create SMS"), STARTUP_FG_COLOUR, STARTUP_BG_COLOUR ) ;
 }
-void lockMenuItem() {
+
+void handleCreateSMS() {
+  if ( sliceStartTime >= nextUITime ) {
+    // Temp return to main menu
+    uiState = UI_DRAW_MAIN_MENU ;
+  }
+}
+
+void lockKeysMenuItem() {
+  uiState = UI_LOCK_KEYS ;
+  // Temp display message to show function was selected
+  nextUITime = sliceStartTime + 1500 ;
+  oled.drawFilledBox( MF_MIN_X, MF_MIN_Y, MF_MAX_X, MF_MAX_Y, MAIN_MENU_BG_COLOUR ) ;
+  oled.selectFont( Arial_Black_16 ) ;
+  oled.drawString( 15, 50, F("Lock keys"), STARTUP_FG_COLOUR, STARTUP_BG_COLOUR ) ;
+}
+
+void handleLockKeys() {
+  if ( sliceStartTime >= nextUITime ) {
+    // Temp return to main menu
+    uiState = UI_DRAW_MAIN_MENU ;
+  }
 }
 
 void drawMenuLine( const String menuText, const byte lineNum, const boolean selected ) {
@@ -96,8 +140,11 @@ void drawMenuLine( const String menuText, const byte lineNum, const boolean sele
 
 String getMenuItemText ( const byte itemNum ) {
   char itemText [ MENU_ITEM_TEXT_BUF_LEN ] ;
+  String numSelector = "" ;
+  numSelector += itemNum + 1 ;
+  numSelector += ". " ;
   strcpy_P ( itemText, ( char * ) pgm_read_word ( & ( main_menu_table[ itemNum ] ) ) ) ;
-  return itemText ;
+  return numSelector + itemText ;
 }
 
 void drawMainMenu() {
@@ -168,16 +215,25 @@ void handleKeyPressed( char key ) {
     
     case UI_MAIN_MENU :
       if ( key == 'D' ) {
+        // Next menu item
         curMenuItem = ( curMenuItem + 1 ) % MAIN_MENU_NUM_ITEMS ;
         updateMainMenu() ;
-      }
-      if ( key == 'U' ) {
+      } else if ( key == 'U' ) {
+        // Previous menu item
         if ( curMenuItem == 0 ) {
           curMenuItem = MAIN_MENU_NUM_ITEMS - 1 ;
         } else {
           curMenuItem -- ;
         }
         updateMainMenu() ;
+      } else if ( key == 'R' || key == 'L' ) {
+        // Select menu item
+        if ( main_menu_functions[ curMenuItem ] ) main_menu_functions[ curMenuItem ]() ;
+      } else if ( key >= '1' && key <= '9' ) {
+        byte itemSelected = key - '1' ;
+        if ( itemSelected < MAIN_MENU_NUM_ITEMS ) {
+          if ( main_menu_functions[ itemSelected ] ) main_menu_functions[ itemSelected ]() ;
+        }
       }
       break ;
       
@@ -211,6 +267,19 @@ void UISlice() {
       break ;
 
     case UI_MAIN_MENU :
+      // Don't do anything as handled by key press event
+      break ;
+      
+    case UI_MAKE_CALL :
+      handleMakeCall() ;
+      break ;
+
+    case UI_CREATE_SMS :
+      handleCreateSMS() ;
+      break ;
+
+    case UI_LOCK_KEYS :
+      handleCreateSMS() ;
       break ;
   }
 }

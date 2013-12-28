@@ -81,13 +81,13 @@ implemented:
  * Keypad setup - output key presses to serial debug
  * Initial startup animation in main frame
  * Initial User Interface - basic menu and drawing and keypad handling
+ * Menu item function selection (using up/down left/righ or # to select)
 
 To do
 -----
 In rough order, the following features/functions are still yet to be 
 implemented:
 
- * Menu item function selection
  * Screen saver - power off screen after set time of inactivity
  * Initiate call - typed number only
  * Send SMS - typed number only and T9(?) style key input
