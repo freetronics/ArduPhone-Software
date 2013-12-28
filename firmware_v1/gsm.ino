@@ -201,9 +201,8 @@ void EnquireGSMStatus() {
     gsmSerialState = gsms_ENQ_SIGNAL_STATUS ;
     
     // Wait before requesting again
-    nextGSMTime = sliceStartTime + 5000 ; // 5 seconds (GSM module doesn't seem to update faster than this)
+    nextGSMTime = sliceStartTime + 5000 ; // 5 seconds (GSM module doesn't seem to update signal strength faster than this)
   }
-  
 }
 
 // =======================

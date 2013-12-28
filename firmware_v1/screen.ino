@@ -87,6 +87,7 @@ void DrawGSMSignalStrength() {
   // Remove this number and use graph below only?
   String msg = "" ;
   msg += gsmSignalStrength ;
+  oled.selectFont( Droid_Sans_12 ) ;
   oled.drawString( GSM_MIN_X + 1, GSM_MIN_Y, msg, BLUE, SB_BG_COLOUR ) ;
   
   // gsmSignalStrength varies from 0-31 as returned by the gsm module

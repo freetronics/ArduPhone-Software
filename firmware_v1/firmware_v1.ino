@@ -22,6 +22,7 @@
 #include <Keypad.h>
 #include <FTOLED.h>
 #include <fonts/Droid_Sans_12.h>
+#include <fonts/Arial_Black_16.h>
 
 // === Constants ===
 // used for stats - first is power of 2 of second for division
@@ -57,7 +58,7 @@ void loop() {
 
   // Gather/output some stats
   sliceCount ++ ;
-  if ( ( sliceStartTime - sliceLastOutputTime ) > sliceStatsPeriod ) {
+  if ( ( sliceStartTime - sliceLastOutputTime ) >= sliceStatsPeriod ) {
     serialStatsOut( F("Slices p/sec: ") ) ;
     serialStatsOut( ( sliceCount * 1000 ) >> sliceStatsShift ) ;
     serialStatsOut( F("\n") ) ;
