@@ -82,13 +82,13 @@ implemented:
  * Initial startup animation in main frame
  * Initial User Interface - basic menu and drawing and keypad handling
  * Menu item function selection (using up/down left/righ or # to select)
+ * Screen saver - power off screen after set time of inactivity
 
 To do
 -----
 In rough order, the following features/functions are still yet to be 
 implemented:
 
- * Screen saver - power off screen after set time of inactivity
  * Initiate call - typed number only
  * Send SMS - typed number only and T9(?) style key input
  * Basic sound alerts on buzzer - incoming call or SMS
@@ -117,7 +117,7 @@ they are interfering with each other and scrambling communications.
 This has mainly been noted if using the USB serial UART for debug
 around the same time as GSM module UART is receiving.
 
-Initiating a connection the USB serial UART effectively resets the
+Initiating a connection to the USB serial UART effectively resets the
 phone. This has yet to be investigated as to whether this side effect
 can be disabled.
 

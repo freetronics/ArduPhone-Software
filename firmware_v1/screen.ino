@@ -12,6 +12,7 @@ const byte OLED_PIN_CS = 4 ;
 const byte OLED_PIN_DC = 7 ;
 const byte OLED_PIN_RESET = 5 ;
 const byte SCREEN_UPDATE_PERIOD = 50 ; // in ms ( 1000 / 50 = 20 fps)
+const unsigned int SCREEN_POWER_OFF_DELAY = 14000 ; // Careful not to go over int limit, otherwise change type
 // Main frame co-ords
 const byte MF_MIN_X = 0 ;
 const byte MF_MIN_Y = 0 ;
@@ -48,7 +49,7 @@ screenStates screenState ;
 // === Variables ===
 
 OLED oled( OLED_PIN_CS, OLED_PIN_DC, OLED_PIN_RESET ) ;
-unsigned long lastScreenTime ;
+unsigned long lastScreenTime, nextScreenOffTime ;
 byte sineIndex [ SINE_FRAMES ] = { 0, 1, 2, 4, 6, 7, 8, 7, 6, 4, 2, 1 } ;
 byte activityIndexX = 0 ;
 byte activityIndexY = SINE_FRAMES / 2 ;
@@ -185,11 +186,14 @@ void UpdateMainFrame() {
 void TurnDisplayOff() {
   oled.setDisplayOn( false ) ;
   screenState = screen_POWER_OFF ;
+  serialDebugOut( F("TurnDisplayOff\n") ) ;
 }
 
 void TurnDisplayOn() {
   oled.setDisplayOn( true ) ;
   screenState = screen_POWER_ON ;
+  nextScreenOffTime = sliceStartTime + SCREEN_POWER_OFF_DELAY ; // Delay screen powering off
+  serialDebugOut( F("TurnDisplayOn\n") ) ;
 }
 
 // =======================
@@ -208,6 +212,8 @@ void ScreenSlice() {
         UpdateStatusBar() ;
         UpdateMainFrame() ;
         lastScreenTime = sliceStartTime ;
+      } else if ( sliceStartTime >= nextScreenOffTime ) {
+        TurnDisplayOff() ;
       }
       break ;
 
@@ -215,6 +221,7 @@ void ScreenSlice() {
       oled.begin() ;
       oled.setOrientation(ROTATE_180) ;
       screenState = screen_SETUP ;
+      nextScreenOffTime = sliceStartTime + SCREEN_POWER_OFF_DELAY * 2 ; // Delay screen powering off
       break ;
       
     case screen_SETUP :

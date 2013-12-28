@@ -211,33 +211,40 @@ void startupAnimation() {
 
 // Called from keypad 'module'
 void handleKeyPressed( char key ) {
-  switch ( uiState ) {
-    
-    case UI_MAIN_MENU :
-      if ( key == 'D' ) {
-        // Next menu item
-        curMenuItem = ( curMenuItem + 1 ) % MAIN_MENU_NUM_ITEMS ;
-        updateMainMenu() ;
-      } else if ( key == 'U' ) {
-        // Previous menu item
-        if ( curMenuItem == 0 ) {
-          curMenuItem = MAIN_MENU_NUM_ITEMS - 1 ;
-        } else {
-          curMenuItem -- ;
-        }
-        updateMainMenu() ;
-      } else if ( key == 'R' || key == 'L' ) {
-        // Select menu item
-        if ( main_menu_functions[ curMenuItem ] ) main_menu_functions[ curMenuItem ]() ;
-      } else if ( key >= '1' && key <= '9' ) {
-        byte itemSelected = key - '1' ;
-        if ( itemSelected < MAIN_MENU_NUM_ITEMS ) {
-          if ( main_menu_functions[ itemSelected ] ) main_menu_functions[ itemSelected ]() ;
-        }
-      }
-      break ;
+  
+  // Check if screen is powered off and if so, turn back on
+  if ( screenState == screen_POWER_OFF ) {
+    TurnDisplayOn() ;
+  } else {
+    switch ( uiState ) {
       
-    // Else ignore the key
+      case UI_MAIN_MENU :
+        if ( key == 'D' ) {
+          // Next menu item
+          curMenuItem = ( curMenuItem + 1 ) % MAIN_MENU_NUM_ITEMS ;
+          updateMainMenu() ;
+        } else if ( key == 'U' ) {
+          // Previous menu item
+          if ( curMenuItem == 0 ) {
+            curMenuItem = MAIN_MENU_NUM_ITEMS - 1 ;
+          } else {
+            curMenuItem -- ;
+          }
+          updateMainMenu() ;
+        } else if ( key == 'R' || key == 'L' ) {
+          // Select menu item
+          if ( main_menu_functions[ curMenuItem ] ) main_menu_functions[ curMenuItem ]() ;
+        } else if ( key >= '1' && key <= '9' ) {
+          byte itemSelected = key - '1' ;
+          if ( itemSelected < MAIN_MENU_NUM_ITEMS ) {
+            if ( main_menu_functions[ itemSelected ] ) main_menu_functions[ itemSelected ]() ;
+          }
+        }
+        nextScreenOffTime = sliceStartTime + SCREEN_POWER_OFF_DELAY ; // Delay screen powering off
+        break ;
+        
+      // Else ignore the key
+    }
   }
 }
 
