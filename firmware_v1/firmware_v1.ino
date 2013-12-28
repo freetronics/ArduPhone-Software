@@ -40,6 +40,7 @@ void setup() {
   KeypadSetup() ;
   SoundSetup() ;
   USBSerialSetup() ;
+  UISetup() ;
 }
  
 void loop() {
@@ -52,12 +53,14 @@ void loop() {
   KeypadSlice() ;
   SoundSlice() ;
   USBSerialSlice() ;
+  UISlice() ;
 
   // Gather/output some stats
   sliceCount ++ ;
   if ( ( sliceStartTime - sliceLastOutputTime ) > sliceStatsPeriod ) {
-    Serial.print( F("Slices p/sec: ") ) ;
-    Serial.println( ( sliceCount * 1000 ) >> sliceStatsShift ) ;
+    serialStatsOut( F("Slices p/sec: ") ) ;
+    serialStatsOut( ( sliceCount * 1000 ) >> sliceStatsShift ) ;
+    serialStatsOut( F("\n") ) ;
     
     // Reset for next iteration
     sliceLastOutputTime = sliceStartTime ;

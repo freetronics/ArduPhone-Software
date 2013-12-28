@@ -68,7 +68,7 @@ Features
 The following features/functions of the code or framework have been 
 implemented:
 
- * Initial file structure (missing ui.ino for to do items though)
+ * Initial file structure
  * Multi-tasking and initial state machines
  * Status bar setup and drawing
  * Power on of GSM module and status bar reporting of each step
@@ -78,7 +78,8 @@ implemented:
  * Initial (incomplete) GSM enquiry and multi-tasking receive handling
  * GSM module status; from powering on to idle
  * Signal strength enquiry and graphing in status bar
- * Keypad setup (though presently not used until UI started)
+ * Keypad setup - output key presses to serial debug
+ * Initial startup animation in main frame
 
 To do
 -----

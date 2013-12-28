@@ -203,7 +203,7 @@ void ScreenSlice() {
   switch ( screenState ) {
     
     case screen_UPDATE :
-      if ( ( sliceStartTime - lastScreenTime ) > SCREEN_UPDATE_PERIOD ) {
+      if ( ( sliceStartTime - lastScreenTime ) >= SCREEN_UPDATE_PERIOD ) {
         UpdateStatusBar() ;
         UpdateMainFrame() ;
         lastScreenTime = sliceStartTime ;

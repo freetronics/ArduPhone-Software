@@ -63,7 +63,7 @@ byte gsmSerialBufferIndex = 0 ;
 
 void PowerOnGsmModule ()
 {
-  if ( sliceStartTime > nextGSMTime ) {
+  if ( sliceStartTime >= nextGSMTime ) {
     switch ( gsmDisplayStatus ) {
       
       case gsmd_HARDWARE_OFF :
@@ -129,8 +129,9 @@ void ReadGSMSerial() {
       
       // DEBUG - BEGIN
       if ( gsmSerialBufferIndex > 0 ) {
-        Serial.print ( F("ReadGSMSerial -> ") ) ;
-        Serial.println ( gsmSerialBuffer ) ;
+        serialDebugOut ( F("ReadGSMSerial -> ") ) ;
+        serialDebugOut ( gsmSerialBuffer ) ;
+        serialDebugOut ( F("\n") ) ;
       }
       // DEBUG - END
 
@@ -138,7 +139,7 @@ void ReadGSMSerial() {
         
         case gsms_ENQ_SIGNAL_STATUS :
           // Expecting a +CSQ: XX,YY response
-          if ( gsmSerialBuffer.startsWith( "+CSQ: " ) ) {
+          if ( gsmSerialBuffer.startsWith( "+CSQ:" ) ) {
             ProcessSignalStatus() ;
             gsmSerialState = gsms_IDLE ;
           }
@@ -172,8 +173,8 @@ void SendGSMSerial( String sendBuffer ) {
   Serial1.print( sendBuffer ) ;
   
   // DEBUG - BEGIN
-  Serial.print ( F("SendGSMSerial -> ") ) ;
-  Serial.println ( sendBuffer) ;
+  serialDebugOut ( F("SendGSMSerial -> ") ) ;
+  serialDebugOut ( sendBuffer + "\n" ) ;
   // DEBUG - END
 }
 
@@ -187,13 +188,14 @@ void SendGSMSerial( const __FlashStringHelper* sendBuffer ) {
   Serial1.print( sendBuffer ) ;
   
   // DEBUG - BEGIN
-  Serial.print ( F("SendGSMSerial F() -> ") ) ;
-  Serial.println ( sendBuffer) ;
+  serialDebugOut ( F("SendGSMSerial F() -> ") ) ;
+  serialDebugOut ( sendBuffer ) ;
+  serialDebugOut ( F("\n") ) ;
   // DEBUG - END
 }
 
 void EnquireGSMStatus() {
-  if ( sliceStartTime > nextGSMTime && ( gsmSerialState == gsms_IDLE || gsmSerialState == gsms_ENQ_SIGNAL_STATUS ) ) {
+  if ( sliceStartTime >= nextGSMTime && ( gsmSerialState == gsms_IDLE || gsmSerialState == gsms_ENQ_SIGNAL_STATUS ) ) {
     
     SendGSMSerial( F("AT+CSQ\r") );
     gsmSerialState = gsms_ENQ_SIGNAL_STATUS ;

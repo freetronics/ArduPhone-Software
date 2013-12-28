@@ -40,9 +40,17 @@ unsigned long lastCheckKeyTime ;
 // === Functions ===
 
 void checkKeyPressed() {
-  if ( ( sliceStartTime - lastCheckKeyTime ) > CHECK_KEY_PERIOD ) {
+  if ( ( sliceStartTime - lastCheckKeyTime ) >= CHECK_KEY_PERIOD ) {
     char key = keypad.getKey() ;
-    if ( key ) Serial.println( key ) ;
+    if ( key ) {
+      // DEBUG - BEGIN
+      serialDebugOut ( F("checkKeyPressed -> ") ) ;
+      serialDebugOut ( key ) ;
+      serialDebugOut ( F("\n") ) ;
+      // DEBUG - END
+      
+      handleKeyPressed ( key ) ;
+    }
     lastCheckKeyTime = sliceStartTime ;
   }
 }
