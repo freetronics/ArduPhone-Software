@@ -81,7 +81,8 @@ implemented:
  * Keypad setup - output key presses to serial debug
  * Initial startup animation in main frame
  * Initial User Interface - basic menu and drawing and keypad handling
- * Menu item function selection (using up/down left/righ or # to select)
+ * Menu item function selection (using up/down left/right or key number
+   to select)
  * Screen saver - power off screen after set time of inactivity
 
 To do

@@ -118,7 +118,7 @@ void lockKeysMenuItem() {
   nextUITime = sliceStartTime + 1500 ;
   oled.drawFilledBox( MF_MIN_X, MF_MIN_Y, MF_MAX_X, MF_MAX_Y, MAIN_MENU_BG_COLOUR ) ;
   oled.selectFont( Arial_Black_16 ) ;
-  oled.drawString( 15, 50, F("Lock keys"), STARTUP_FG_COLOUR, STARTUP_BG_COLOUR ) ;
+  oled.drawString( 20, 50, F("Lock keys"), STARTUP_FG_COLOUR, STARTUP_BG_COLOUR ) ;
 }
 
 void handleLockKeys() {
@@ -167,16 +167,16 @@ void drawMainMenu() {
 // Draw if something changed
 void updateMainMenu() {
   if ( curMenuItem != lastMenuItem ) {
-   if (  curMenuItem >= MAIN_MENU_MAX_LINES || lastMenuItem >= MAIN_MENU_MAX_LINES ) {
-     // Just redraw whole thing as we're scrolling items
-     drawMainMenu() ;
-   } else {
-     // Just draw the items that have changed
-     oled.selectFont( Arial_Black_16 ) ;
-     drawMenuLine( getMenuItemText ( lastMenuItem ), lastMenuItem, false ) ;
-     drawMenuLine( getMenuItemText ( curMenuItem ), curMenuItem, true ) ;
-     lastMenuItem = curMenuItem ;
-   }
+    if (  curMenuItem >= MAIN_MENU_MAX_LINES || lastMenuItem >= MAIN_MENU_MAX_LINES ) {
+      // Just redraw whole thing as we're scrolling items
+      drawMainMenu() ;
+    } else {
+      // Just draw the items that have changed
+      oled.selectFont( Arial_Black_16 ) ;
+      drawMenuLine( getMenuItemText ( lastMenuItem ), lastMenuItem, false ) ;
+      drawMenuLine( getMenuItemText ( curMenuItem ), curMenuItem, true ) ;
+      lastMenuItem = curMenuItem ;
+    }
   }
 }
 
@@ -237,9 +237,15 @@ void handleKeyPressed( char key ) {
         } else if ( key >= '1' && key <= '9' ) {
           byte itemSelected = key - '1' ;
           if ( itemSelected < MAIN_MENU_NUM_ITEMS ) {
-            if ( main_menu_functions[ itemSelected ] ) main_menu_functions[ itemSelected ]() ;
+            curMenuItem = itemSelected ;
+            if ( main_menu_functions[ itemSelected ] ) {
+              main_menu_functions[ itemSelected ]() ;
+            } else {
+              updateMainMenu() ;
+            }
           }
         }
+        
         nextScreenOffTime = sliceStartTime + SCREEN_POWER_OFF_DELAY ; // Delay screen powering off
         break ;
         
