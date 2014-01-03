@@ -24,6 +24,8 @@
 #include <fonts/Droid_Sans_12.h>
 #include <fonts/Arial_Black_16.h>
 
+#include "ui.h"
+
 // === Constants ===
 // used for stats - first is power of 2 of second for division
 const int sliceStatsPeriod = 4096 ; // in ms (2^12)

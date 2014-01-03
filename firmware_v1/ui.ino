@@ -21,19 +21,28 @@ const Colour MAIN_MENU_FG_COLOUR = WHITE ;
 const byte MAIN_MENU_MAX_LINES = 7 ;
 const byte MAIN_MENU_LINE_HEIGHT = 16 ;
 const byte MENU_ITEM_TEXT_BUF_LEN = 32 ;
+// Make call values
+const Colour MAKE_CALL_BG_COLOUR = YELLOW ;
+const Colour MAKE_CALL_FG_COLOUR = BLUE ;
+const Colour MAKE_CALL_NUM_COLOUR = RED ;
+const Colour MAKE_CALL_KEY_COLOUR = DARKGREEN ;
+const byte PHONE_NUM_BUF_MIN_Y = MF_MIN_Y + 50 ;
+const byte PHONE_NUM_BUF_SIZE = 14 ;
+const unsigned int MAKE_CALL_ERROR_DISPLAY_TIME = 3000 ; // How long to display error when dialilng
 
 // === States ===
 
-enum uiStates {
-  UI_UNINITIALISED,
-  UI_START_UP,
-  UI_DRAW_MAIN_MENU,
-  UI_MAIN_MENU,
-  UI_MAKE_CALL,
-  UI_CREATE_SMS,
-  UI_LOCK_KEYS
+// uiStates enum moved to ui.h due to Arduino IDE limitation when enum used as function parameter
+uiStates uiState, returnNumState ;
+enum makeCallStates {
+  MC_DRAW_CALLING_NUMBER,
+  MC_WAITING_FOR_MODEM,
+  MC_DIALLING,
+  MC_MODEM_ERROR,
+  MC_ON_CALL,
+  MC_HANG_UP,
 } ;
-uiStates uiState ;
+makeCallStates makeCallState ;
 
 // === Variables ===
 
@@ -65,7 +74,7 @@ PROGMEM const char * main_menu_table[] = {
 } ;
 typedef void ( * FunctionPointer ) ();
 FunctionPointer main_menu_functions[] = {
-  callMenuItem,
+  makeCallMenuItem,
   smsMenuItem,
   lockKeysMenuItem,
   0,
@@ -76,25 +85,124 @@ FunctionPointer main_menu_functions[] = {
   0,
   0
 } ;
-byte curMenuItem, lastMenuItem = 0 ;
+byte curMenuItem = 0, lastMenuItem = 0 ;
+char phoneNumBuffer[ PHONE_NUM_BUF_SIZE ] ;
+byte phoneNumBufferIndex ;
+boolean phoneNumberEntered = false ;
 
 // === Functions ===
 
-void callMenuItem() {
-  uiState = UI_MAKE_CALL ;
-  // Temp display message to show function was selected
-  nextUITime = sliceStartTime + 1500 ;
-  oled.drawFilledBox( MF_MIN_X, MF_MIN_Y, MF_MAX_X, MF_MAX_Y, MAIN_MENU_BG_COLOUR ) ;
+// Call related functions
+
+void drawPhoneNumberBuffer() {
+  // Draw centered phone number with space before and after (needed incase of backspace)
   oled.selectFont( Arial_Black_16 ) ;
-  oled.drawString( 20, 50, F("Make Call"), STARTUP_FG_COLOUR, STARTUP_BG_COLOUR ) ;
+  char displayNumber[ PHONE_NUM_BUF_SIZE + 3 ] ; // To allow for a ' ' before and after
+  displayNumber[ 0 ] = ' ' ;
+  strncpy( displayNumber + 1, phoneNumBuffer, PHONE_NUM_BUF_SIZE ) ;
+  displayNumber[ phoneNumBufferIndex + 1 ] = ' ' ;
+  displayNumber[ phoneNumBufferIndex + 2 ] = '\0' ;
+  byte posX = ( MF_MAX_X - oledStringWidth( displayNumber ) ) / 2 ;
+  oled.drawString( posX, PHONE_NUM_BUF_MIN_Y, displayNumber, MAKE_CALL_NUM_COLOUR, MAKE_CALL_BG_COLOUR ) ;
 }
 
-void handleMakeCall () {
-  if ( sliceStartTime >= nextUITime ) {
-    // Temp return to main menu
+void setupGetPhoneNumer( const uiStates returnState ) {
+  phoneNumberEntered = false ;
+  phoneNumBuffer[ 0 ] = '\0' ;
+  phoneNumBufferIndex = 0 ;
+  returnNumState = returnState ;
+  uiState = UI_GET_PHONE_NUM ;
+}
+
+void makeCallMenuItem() {
+  uiState = UI_MAKE_CALL ;
+  // Setup screen to enter number
+  oled.drawFilledBox( MF_MIN_X, MF_MIN_Y, MF_MAX_X, MF_MAX_Y, MAKE_CALL_BG_COLOUR ) ;
+  oled.selectFont( Arial_Black_16 ) ;
+  oled.drawString( 7, MF_MAX_Y - 30, F("Enter number"), MAKE_CALL_FG_COLOUR, MAKE_CALL_BG_COLOUR ) ;
+  oled.drawString( 1, MF_MIN_Y, F("Delete"), MAKE_CALL_KEY_COLOUR, MAKE_CALL_BG_COLOUR ) ;
+  oled.drawString( 50, MF_MIN_Y + 18, F("Call"), MAKE_CALL_KEY_COLOUR, MAKE_CALL_BG_COLOUR ) ;
+  oled.drawString( 73, MF_MIN_Y, F("Cancel"), MAKE_CALL_KEY_COLOUR, MAKE_CALL_BG_COLOUR ) ;
+  // Setup to get a phone number and return to UI_MAKE_CALL when complete/cancelled
+  setupGetPhoneNumer( UI_MAKE_CALL ) ;
+  // Initial state for making call
+  makeCallState = MC_DRAW_CALLING_NUMBER ;
+}
+
+void handleMakeCall() {
+  if ( phoneNumberEntered && phoneNumBufferIndex > 0 ) {
+    switch ( makeCallState ) {
+
+      case MC_DRAW_CALLING_NUMBER :
+        oled.drawFilledBox( MF_MIN_X, MF_MIN_Y, MF_MAX_X, MF_MAX_Y, MAKE_CALL_BG_COLOUR ) ;
+        oled.selectFont( Arial_Black_16 ) ;
+        oled.drawString( 38, MF_MAX_Y - 30, F("Calling"), MAKE_CALL_FG_COLOUR, MAKE_CALL_BG_COLOUR ) ;
+        drawPhoneNumberBuffer() ;
+        makeCallState = MC_WAITING_FOR_MODEM ;
+        break ;
+      
+      case MC_WAITING_FOR_MODEM :
+        if ( gsmSerialState == gsms_IDLE && gsmState == gsm_IDLE ) {
+          // modem is now considered IDLE, proceed to dial and set states
+          SendGSMSerial( F("ATD") ) ;
+          SendGSMSerial( phoneNumBuffer ) ;
+          SendGSMSerial( F(";\r") ) ; // ';' needed for voice call
+          makeCallState = MC_DIALLING ;
+          gsmSerialState = gsms_DIALLING ;
+          oled.drawString( 56, MF_MIN_Y, F("Hang up"), MAKE_CALL_KEY_COLOUR, MAKE_CALL_BG_COLOUR ) ;
+        }
+        break ;
+        
+      case MC_DIALLING :
+        // Do nothing as ReadGSMSerial will call ProcessMakeCallResponse
+        break ;
+        
+      case MC_MODEM_ERROR :
+        if ( sliceStartTime >= nextUITime ) {
+          // Error has been displayed for set time, return to main menu
+          uiState = UI_DRAW_MAIN_MENU ;
+        }
+        break ;
+        
+      case MC_ON_CALL :
+        break ;
+        
+      case MC_HANG_UP :
+        // Hang up and return to main men
+        SendGSMSerial( F("ATH\r") ) ;
+        uiState = UI_DRAW_MAIN_MENU ;
+        gsmState = gsm_IDLE ; // Ignore any response from hang up message
+        // Important - must return serial state to idling for polling
+        gsmSerialState = gsms_IDLE ;
+        break ;
+    }
+  } else {
+    // No number to call, return to main menu
     uiState = UI_DRAW_MAIN_MENU ;
   }
 }
+
+void ProcessMakeCallResponse() {
+  if ( gsmSerialBuffer.startsWith( "OK" ) ) {
+    makeCallState = MC_ON_CALL ;
+  } else {
+    if ( makeCallState != MC_HANG_UP ) {
+      // Anything is else is a failure, let user know message (could be busy, etc.)
+      oled.selectFont( Arial_Black_16 ) ;
+      // Center the return message
+      byte posX = ( MF_MAX_X / 2 ) - ( oledStringWidth( & gsmSerialBuffer [ 0 ] ) / 2 ) ;
+      oled.drawString( posX, MF_MIN_Y + 20, gsmSerialBuffer, MAKE_CALL_NUM_COLOUR, MAKE_CALL_BG_COLOUR ) ;
+      // Setup to wait for error to be visible for a time
+      makeCallState = MC_MODEM_ERROR ;
+      nextUITime = sliceStartTime + MAKE_CALL_ERROR_DISPLAY_TIME ;
+    }
+  // Important - must return serial state to idling for polling
+  gsmSerialState = gsms_IDLE ;
+  }
+}
+
+
+// SMS related functions
 
 void smsMenuItem() {
   uiState = UI_CREATE_SMS ;
@@ -245,12 +353,65 @@ void handleKeyPressed( char key ) {
             }
           }
         }
+        break ;
         
-        nextScreenOffTime = sliceStartTime + SCREEN_POWER_OFF_DELAY ; // Delay screen powering off
+      case UI_GET_PHONE_NUM :
+        if ( key == 'U' ) {
+          // Number is complete, pass to return state
+          phoneNumberEntered = true ;
+          uiState = returnNumState ;
+        } else if ( key == 'D' || key == 'R' ) {
+          // User has cancelled, go back to main menu
+          uiState = UI_DRAW_MAIN_MENU ;
+        } else if ( key == 'L') {
+          // Backspace, loose the last char
+          if ( phoneNumBufferIndex > 0 ) {
+            phoneNumBuffer[ -- phoneNumBufferIndex ] = '\0' ;
+          }
+        } else if ( key >= '0' && key <= '9' ) {
+          // Add to phone number
+          if ( phoneNumBufferIndex < PHONE_NUM_BUF_SIZE - 1 ) {
+            phoneNumBuffer[ phoneNumBufferIndex ++ ] = key ;
+            phoneNumBuffer[ phoneNumBufferIndex ] = '\0' ;
+          }
+        } else if ( key == '*' ) {
+          // Add a '+' to phone number
+          if ( phoneNumBufferIndex < PHONE_NUM_BUF_SIZE - 1 ) {
+            phoneNumBuffer[ phoneNumBufferIndex ++ ] = '+' ;
+            phoneNumBuffer[ phoneNumBufferIndex ] = '\0' ;
+          }
+        }
+        drawPhoneNumberBuffer() ;
+        break ;
+      
+      case UI_MAKE_CALL :
+        switch ( makeCallState ) {
+          case MC_DIALLING :
+          case MC_ON_CALL :
+            if ( key == 'D' || key == 'R' ) {
+              // User has cancelled or wants to hang up
+              makeCallState = MC_HANG_UP ;
+            }
+            break ;
+          case MC_MODEM_ERROR :
+            // Abort showing error and go to menu
+            uiState = UI_DRAW_MAIN_MENU ;
+            break ;
+        }
+        if ( makeCallState == MC_MODEM_ERROR ) {
+          // Abort showing error and go straight to menu
+          uiState = UI_DRAW_MAIN_MENU ;
+        }
+        break ;
+        
+      case UI_START_UP :
+        // Abort animation and go to menu
+        uiState = UI_DRAW_MAIN_MENU ;
         break ;
         
       // Else ignore the key
     }
+  nextScreenOffTime = sliceStartTime + SCREEN_POWER_OFF_DELAY ; // Delay screen powering off
   }
 }
 
@@ -259,6 +420,8 @@ void handleKeyPressed( char key ) {
 void UISetup() {
   uiState = UI_UNINITIALISED ;
   nextUITime = sliceStartTime + 200 ; // wait breifly before starting UI
+  
+
 }
 
 // =======================
@@ -285,6 +448,10 @@ void UISlice() {
       
     case UI_MAKE_CALL :
       handleMakeCall() ;
+      break ;
+      
+    case UI_GET_PHONE_NUM :
+      // Don't do anything as handled by key press event
       break ;
 
     case UI_CREATE_SMS :

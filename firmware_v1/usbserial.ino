@@ -40,6 +40,12 @@ void serialDebugOut ( const __FlashStringHelper* sendBuffer ) {
 void serialDebugOut ( const char val ) {
   if ( serialDebugMsgs ) Serial.print( val ) ;
 }
+void serialDebugOut ( const unsigned long val ) {
+  if ( serialDebugMsgs ) Serial.print( val ) ;
+}
+void serialDebugOut ( const byte val ) {
+  if ( serialDebugMsgs ) Serial.print( val ) ;
+}
 
 // =======================
 

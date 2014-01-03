@@ -22,8 +22,7 @@ enum gsmStates {
   gsm_UNINITIALISED,
   gsm_SETUP,
   gsm_IDLE,
-  gsm_ON_CALL,
-  gsm_MAKE_CALL,
+  gsm_ENQ_STATUS,
   gsm_POWER_OFF_SOFT,
   gsm_POWER_ON_SOFT
 } ;
@@ -47,8 +46,7 @@ gsmDisplayStatusStates gsmDisplayStatus, gsmLastDisplayedStatus ;
 enum gsmSerialStates {
   gsms_IDLE,
   gsms_ENQ_SIGNAL_STATUS,
-  gsms_SENDING,
-  gsms_RECEIVE
+  gsms_DIALLING
 } ;
 gsmSerialStates gsmSerialState ;
 
@@ -99,7 +97,7 @@ void PowerOnGsmModule ()
         gsmDisplayStatus = gsmd_UNKNOWN ;
         // Tell main state machine to start idling
         nextGSMTime = sliceStartTime + 500 ; // Wait before allowing IDLE to start making enquiries
-        gsmState = gsm_IDLE ;
+        gsmState = gsm_ENQ_STATUS ; // To force enquiry before allowing other calls, etc
         break ;
     }
   }
@@ -127,34 +125,40 @@ void ReadGSMSerial() {
     if ( inByte == 10 || inByte == 13 || gsmSerialBufferIndex == GSM_SERIAL_BUF_SIZE - 1 ) {
       // We have a end of line or full buffer, process it
       
-      // DEBUG - BEGIN
       if ( gsmSerialBufferIndex > 0 ) {
+        // DEBUG - BEGIN
         serialDebugOut ( F("ReadGSMSerial -> ") ) ;
         serialDebugOut ( gsmSerialBuffer ) ;
         serialDebugOut ( F("\n") ) ;
-      }
-      // DEBUG - END
-
-      switch ( gsmSerialState ) {
-        
-        case gsms_ENQ_SIGNAL_STATUS :
-          // Expecting a +CSQ: XX,YY response
-          if ( gsmSerialBuffer.startsWith( "+CSQ:" ) ) {
-            ProcessSignalStatus() ;
-            gsmSerialState = gsms_IDLE ;
-          }
-          break ;
+        // DEBUG - END
+  
+        switch ( gsmSerialState ) {
           
-        case gsms_IDLE :
-          // Drop through to default...
-          ;
-        default :
-          // See if incoming RING message if not expecting anything
-          ;
-      }
+          case gsms_ENQ_SIGNAL_STATUS :
+            // Expecting a +CSQ: XX,YY response
+            if ( gsmSerialBuffer.startsWith( "+CSQ:" ) ) {
+              ProcessSignalStatus() ;
+              gsmSerialState = gsms_IDLE ;
+              gsmState = gsm_IDLE ;
+            }
+            break ;
+  
+          case gsms_DIALLING :
+            ProcessMakeCallResponse() ;
+            break ;
+            
+          case gsms_IDLE :
+            // Drop through to default...
+            ;
+          default :
+            // See if incoming RING message if not expecting anything
+            ;
+        }
+      
       // Clear the input buffer
       gsmSerialBuffer = "" ;
       gsmSerialBufferIndex = 0 ;
+      }
     } else {
       // Add byte to buffer
       gsmSerialBuffer += inByte ;
@@ -189,6 +193,22 @@ void SendGSMSerial( const __FlashStringHelper* sendBuffer ) {
   
   // DEBUG - BEGIN
   serialDebugOut ( F("SendGSMSerial F() -> ") ) ;
+  serialDebugOut ( sendBuffer ) ;
+  serialDebugOut ( F("\n") ) ;
+  // DEBUG - END
+}
+
+// Send chars to GSM module and clears receive buffer (overloaded above)
+void SendGSMSerial( char * sendBuffer ) {
+  // First clear anything out of UART+buffer and discard
+  while ( Serial1.available() ) Serial1.read() ;
+  gsmSerialBuffer = "" ;
+  gsmSerialBufferIndex = 0 ;
+  // Send the passed in buffer
+  Serial1.print( sendBuffer ) ;
+  
+  // DEBUG - BEGIN
+  serialDebugOut ( F("SendGSMSerial char * () -> ") ) ;
   serialDebugOut ( sendBuffer ) ;
   serialDebugOut ( F("\n") ) ;
   // DEBUG - END
@@ -247,17 +267,15 @@ void GsmSlice() {
       PowerOnGsmModule() ;
       break ;
       
+    case gsm_ENQ_STATUS :
+      EnquireGSMStatus() ;
+      ReadGSMSerial() ;
+      gsmState = gsm_IDLE ;
+      break ;
+
     case gsm_IDLE :
       EnquireGSMStatus() ;
       ReadGSMSerial() ;
-      break ;
-
-    case gsm_ON_CALL :
-
-      break ;
-
-    case gsm_MAKE_CALL :
-
       break ;
 
     case gsm_POWER_OFF_SOFT :
