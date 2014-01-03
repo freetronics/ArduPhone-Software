@@ -85,7 +85,8 @@ implemented:
    to select)
  * Screen saver - power off screen after set time of inactivity
  * Initiate call - typed number only
- * Handle call hang up
+ * Handle call hang up (before, during or by other party)
+ * Get and display operator name in status bar
 
 To do
 -----

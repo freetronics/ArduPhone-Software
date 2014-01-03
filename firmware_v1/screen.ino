@@ -106,7 +106,9 @@ void DrawGSMSignalStrength() {
 
 // Draw status of GSM module, inc aerial strength, if changed
 void UpdateGSMStatusDisplay() {
-  if ( gsmDisplayStatus != gsmLastDisplayedStatus || gsmSignalStrength != gsmDisplayedSignalStrength ) {
+  if ( gsmDisplayStatus != gsmLastDisplayedStatus || 
+        gsmSignalStrength != gsmDisplayedSignalStrength ||
+        operatorName != operatorDisplayedName ) {
     oled.drawFilledBox( GSM_MIN_X, GSM_MIN_Y, GSM_MAX_X, GSM_MAX_Y, SB_BG_COLOUR ) ;
     oled.selectFont( Droid_Sans_12 ) ;
 
@@ -129,7 +131,7 @@ void UpdateGSMStatusDisplay() {
         break ;
   
       case gsmd_POWERING_ON_4 :
-        oled.drawString( GSM_MIN_X + 1, GSM_MIN_Y, F("POWER ON 4"), ORANGE, SB_BG_COLOUR ) ;
+        oled.drawString( GSM_MIN_X + 1, GSM_MIN_Y, F("Waiting"), ORANGE, SB_BG_COLOUR ) ;
         break ;
         
       case gsmd_UNKNOWN :
@@ -139,14 +141,8 @@ void UpdateGSMStatusDisplay() {
       case gsmd_NORMAL :
         // Draw aerial strength
         DrawGSMSignalStrength() ;
-        // Draw Carrier name if possible?
-        // - TODO
-        break ;
-  
-      case gsmd_NO_SIM :
-        // Draw aerial strength
-        DrawGSMSignalStrength() ;
-        oled.drawString( GSM_MIN_X + 35, GSM_MIN_Y, F("NO SIM"), RED, SB_BG_COLOUR ) ;
+        // Draw Carrier name if possible
+        oled.drawString( GSM_MIN_X + 35, GSM_MIN_Y, operatorName, BLACK, SB_BG_COLOUR ) ;
         break ;
   
       case gsmd_POWER_OFF_SOFT :
@@ -158,6 +154,7 @@ void UpdateGSMStatusDisplay() {
         break ;
     }
     gsmLastDisplayedStatus = gsmDisplayStatus ;
+    if ( operatorDisplayedName != operatorName ) operatorDisplayedName = operatorName ;
   }
 }
 

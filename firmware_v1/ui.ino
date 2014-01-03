@@ -139,7 +139,7 @@ void handleMakeCall() {
         oled.drawString( 38, MF_MAX_Y - 30, F("Calling"), MAKE_CALL_FG_COLOUR, MAKE_CALL_BG_COLOUR ) ;
         drawPhoneNumberBuffer() ;
         makeCallState = MC_WAITING_FOR_MODEM ;
-        break ;
+<        break ;
       
       case MC_WAITING_FOR_MODEM :
         if ( gsmSerialState == gsms_IDLE && gsmState == gsm_IDLE ) {
@@ -386,6 +386,7 @@ void handleKeyPressed( char key ) {
       
       case UI_MAKE_CALL :
         switch ( makeCallState ) {
+          case MC_WAITING_FOR_MODEM :
           case MC_DIALLING :
           case MC_ON_CALL :
             if ( key == 'D' || key == 'R' ) {

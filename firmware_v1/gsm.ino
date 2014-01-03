@@ -34,9 +34,9 @@ enum gsmDisplayStatusStates {
   gsmd_POWERING_ON_2,
   gsmd_POWERING_ON_3,
   gsmd_POWERING_ON_4,
+  gsmd_POWERING_ON_5,
   gsmd_UNKNOWN,
   gsmd_NORMAL, // Also shows signal strength
-  gsmd_NO_SIM, // Also shows signal strength
   gsmd_POWER_OFF_SOFT, // Equiv to airplane mode?
   gsmd_POWERING_ON_SOFT, // Transiioning from airplane to normal mode
   gsmd_REDRAW // Used to force if redraw required for last displayed status
@@ -56,6 +56,9 @@ unsigned long nextGSMTime ;
 byte gsmSignalStrength, gsmDisplayedSignalStrength ; // As per h/w module returned values are 0-31
 String gsmSerialBuffer ; 
 byte gsmSerialBufferIndex = 0 ;
+boolean gotOperatorName = false ;
+String operatorName = "", operatorDisplayedName = "" ;
+boolean gsmOKResponse = false ;
 
 // === Functions ===
 
@@ -89,10 +92,26 @@ void PowerOnGsmModule ()
         digitalWrite( GSM_PIN_ON_KEY, LOW ) ;
         digitalWrite( GSM_PIN_DSR_CTS, LOW ) ;
         gsmDisplayStatus = gsmd_POWERING_ON_4 ;
-        nextGSMTime = sliceStartTime +  100 ;
+        nextGSMTime = sliceStartTime +  1500 ;
+        gsmOKResponse = false ; // prep next state to check getting 'OK' responses
         break ;
         
       case gsmd_POWERING_ON_4 :
+        // Should now be powered on
+        // Wait for 'OK' response then initialise AT commands
+        if ( gsmOKResponse ) {
+          // GSM Modem has reposnded with OK
+          // Send initialisation string(s) and pass onto next state
+          SendGSMSerial( F("AT+COPS=1,0\r") ) ; // Return operator name in text rather than numerical format
+          gsmDisplayStatus = gsmd_POWERING_ON_5 ;
+        } else { 
+          // Try (again) to send 'AT' command to ensure gsm modem is responding before proceeding
+          SendGSMSerial( F("AT\r") ) ;
+          nextGSMTime = sliceStartTime + 1000 ; // Wait before next AT command attempt
+        }
+        break ;
+
+      case gsmd_POWERING_ON_5 :
         // Should now be powered on, so go to unknown display status before polling
         gsmDisplayStatus = gsmd_UNKNOWN ;
         // Tell main state machine to start idling
@@ -110,17 +129,23 @@ void ProcessSignalStatus() {
     gsmSignalStrength *= 10 ;
     gsmSignalStrength += gsmSerialBuffer [ 7 ] - '0' ;
   }
-  
-  if ( gsmSerialBuffer.endsWith( "99" ) ) {
-    gsmDisplayStatus = gsmd_NO_SIM ;
-  } else {
-    gsmDisplayStatus = gsmd_NORMAL ;
+  gsmDisplayStatus = gsmd_NORMAL ;
+}
+
+void ProcessOperatorName() {
+  // Extract operator name from buffer in form '+COPS: 0,0,"XXXXXX"'
+  byte count = 12 ;
+  char nextChar ;
+  operatorName = "" ;
+  while ( ( nextChar = gsmSerialBuffer [ count ++ ] ) != '"' && nextChar != 0 ) {
+    operatorName += nextChar ;
   }
+  gotOperatorName = true ;
 }
 
 // Looks for chars from GSM module and fills buffer
 void ReadGSMSerial() {
-  if ( Serial1.available() ) {
+  while ( Serial1.available() ) {
     char inByte = Serial1.read() ;
     if ( inByte == 10 || inByte == 13 || gsmSerialBufferIndex == GSM_SERIAL_BUF_SIZE - 1 ) {
       // We have a end of line or full buffer, process it
@@ -135,9 +160,13 @@ void ReadGSMSerial() {
         switch ( gsmSerialState ) {
           
           case gsms_ENQ_SIGNAL_STATUS :
-            // Expecting a +CSQ: XX,YY response
+            // Expecting either a signal or operator response
             if ( gsmSerialBuffer.startsWith( "+CSQ:" ) ) {
               ProcessSignalStatus() ;
+              gsmSerialState = gsms_IDLE ;
+              gsmState = gsm_IDLE ;
+            } else if ( gsmSerialBuffer.startsWith( "+COPS:" ) ) {
+              ProcessOperatorName() ;
               gsmSerialState = gsms_IDLE ;
               gsmState = gsm_IDLE ;
             }
@@ -154,10 +183,16 @@ void ReadGSMSerial() {
             // See if incoming RING message if not expecting anything
             ;
         }
+        
+        if ( gsmState == gsm_SETUP ) {
+          if ( gsmSerialBuffer.startsWith( "OK" ) ) {
+            gsmOKResponse = true ;
+          }
+        }
       
-      // Clear the input buffer
-      gsmSerialBuffer = "" ;
-      gsmSerialBufferIndex = 0 ;
+        // Clear the input buffer
+        gsmSerialBuffer = "" ;
+        gsmSerialBufferIndex = 0 ;
       }
     } else {
       // Add byte to buffer
@@ -217,8 +252,16 @@ void SendGSMSerial( char * sendBuffer ) {
 void EnquireGSMStatus() {
   if ( sliceStartTime >= nextGSMTime && ( gsmSerialState == gsms_IDLE || gsmSerialState == gsms_ENQ_SIGNAL_STATUS ) ) {
     
-    SendGSMSerial( F("AT+CSQ\r") );
+    if ( gotOperatorName ) {
+      SendGSMSerial( F("AT+CSQ\r") ) ; // Get signal strength
+    } else {
+      SendGSMSerial( F("AT+COPS?\r") ) ; // Enquire operator name
+    }
     gsmSerialState = gsms_ENQ_SIGNAL_STATUS ;
+    
+    // Check if really got operator name as may have enquired too soon (still locating)
+    // Do the test here rather than above so that enquiry alternates between two until found
+    if ( operatorName.length() == 0 ) gotOperatorName = false ;
     
     // Wait before requesting again
     nextGSMTime = sliceStartTime + 5000 ; // 5 seconds (GSM module doesn't seem to update signal strength faster than this)
@@ -265,6 +308,7 @@ void GsmSlice() {
       
     case gsm_SETUP :
       PowerOnGsmModule() ;
+      ReadGSMSerial() ; // Checking AT command responses
       break ;
       
     case gsm_ENQ_STATUS :
