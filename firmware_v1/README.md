@@ -84,13 +84,14 @@ implemented:
  * Menu item function selection (using up/down left/right or key number
    to select)
  * Screen saver - power off screen after set time of inactivity
+ * Initiate call - typed number only
+ * Handle call hang up
 
 To do
 -----
 In rough order, the following features/functions are still yet to be 
 implemented:
 
- * Initiate call - typed number only
  * Send SMS - typed number only and T9(?) style key input
  * Basic sound alerts on buzzer - incoming call or SMS
  * Lock / unlock keypad
