@@ -23,6 +23,7 @@ enum gsmStates {
   gsm_UNINITIALISED,
   gsm_SETUP,
   gsm_IDLE,
+  gsm_WAIT,
   gsm_ENQ_STATUS,
   gsm_POWER_OFF_SOFT,
   gsm_POWER_ON_SOFT
@@ -182,6 +183,7 @@ void ProcessOperatorName() {
 void ReadGSMSerial() {
   while ( Serial1.available() ) {
     char inByte = Serial1.read() ;
+
     if ( inByte == 10 || inByte == 13 || gsmSerialBufferIndex == GSM_SERIAL_BUF_SIZE - 1 ) {
       // We have a end of line or full buffer, process it
 
@@ -210,7 +212,7 @@ void ReadGSMSerial() {
           case gsms_DIALLING :
             ProcessMakeCallResponse() ;
             break ;
-            
+
           case gsms_INCOMING_CALL :
             if ( gsmSerialBuffer.startsWith( "NO CARRIER" ) ) {
               // Other party hung up
@@ -365,6 +367,10 @@ void GsmSlice() {
 
     case gsm_IDLE :
       EnquireGSMStatus() ;
+      ReadGSMSerial() ;
+      break ;
+
+    case gsm_WAIT :
       ReadGSMSerial() ;
       break ;
 

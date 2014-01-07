@@ -35,6 +35,9 @@ const byte GSM_MIN_X = SB_MIN_X ;
 const byte GSM_MIN_Y = SB_MIN_Y + 1 ;
 const byte GSM_MAX_X = SB_MIN_X + 80 ;
 const byte GSM_MAX_Y = SB_MAX_Y ;
+// update to suit. make them parameters?
+const Colour SCREEN_PRINT_BG_COLOUR = YELLOW ;
+const Colour SCREEN_PRINT_FG_COLOUR = BLUE ;
 
 // === States ===
 
@@ -50,6 +53,8 @@ screenStates screenState ;
 // === Variables ===
 
 OLED oled( OLED_PIN_CS, OLED_PIN_DC, OLED_PIN_RESET ) ;
+OLED_TextBox box(oled, MF_MIN_X, MF_MIN_Y+35, 128, 75);
+
 unsigned long lastScreenTime, nextScreenOffTime ;
 byte sineIndex [ SINE_FRAMES ] = { 0, 1, 2, 4, 6, 7, 8, 7, 6, 4, 2, 1 } ;
 byte activityIndexX = 0 ;
@@ -242,4 +247,17 @@ void ScreenSlice() {
       break ;
 
   }
+}
+
+
+void ScreenPrint(const char * msg)
+{
+    oled.selectFont( Arial_Black_16 );
+    box.setForegroundColour(SCREEN_PRINT_FG_COLOUR);
+    box.setBackgroundColour(SCREEN_PRINT_BG_COLOUR);
+    box.clear();
+    while(*msg)
+    {
+        box.print(*msg++);
+    }
 }

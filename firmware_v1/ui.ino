@@ -29,6 +29,7 @@ const Colour MAKE_CALL_NUM_COLOUR = RED ;
 const Colour MAKE_CALL_KEY_COLOUR = DARKGREEN ;
 const byte PHONE_NUM_BUF_MIN_Y = MF_MIN_Y + 50 ;
 const byte PHONE_NUM_BUF_SIZE = 14 ;
+const unsigned char SMS_BUF_SIZE = 161 ;
 const unsigned int MAKE_CALL_ERROR_DISPLAY_TIME = 3000 ; // How long to display error when dialilng
 // Receive call values
 const Colour RCV_CALL_BG_COLOUR = GREEN ;
@@ -37,7 +38,10 @@ const Colour RCV_CALL_NUM_COLOUR = RED ;
 const Colour RCV_CALL_KEY_COLOUR = DARKGREEN ;
 String callFromNumber ;
 const unsigned int RCV_CALL_HANG_UP_DISPLAY_TIME = 3000 ; // How long to display when hung up
-
+// Send SMS colours
+const Colour SEND_SMS_FG_COLOUR  = YELLOW;
+const Colour SEND_SMS_BG_COLOUR  = GREEN;
+const Colour SEND_SMS_KEY_COLOUR = DARKGREEN;
 
 // === States ===
 
@@ -51,6 +55,7 @@ enum receiveCallStates {
 } ;
 receiveCallStates receiveCallState ;
 enum makeCallStates {
+    /// MakeCall states
   MC_DRAW_CALLING_NUMBER,
   MC_WAITING_FOR_MODEM,
   MC_DIALLING,
@@ -59,6 +64,16 @@ enum makeCallStates {
   MC_HANG_UP,
 } ;
 makeCallStates makeCallState ;
+
+enum makeSMSStates {
+    /// SMS states
+    SMS_SEND_TEXT_MODE,
+    SMS_WAIT_TEXT_MODE_OK,
+    SMS_WAIT_GT,
+    SMS_WAIT_OK,
+} ;
+makeSMSStates makeSMSState ;
+
 
 // === Variables ===
 
@@ -101,10 +116,14 @@ FunctionPointer main_menu_functions[] = {
   0,
   0
 } ;
+
 byte curMenuItem = 0, lastMenuItem = 0 ;
 char phoneNumBuffer[ PHONE_NUM_BUF_SIZE ] ;
+char smsBuffer[ SMS_BUF_SIZE ];
 byte phoneNumBufferIndex ;
+unsigned char smsBufferIndex;
 boolean phoneNumberEntered = false ;
+boolean smsEntered = false ;
 
 // === Functions ===
 
@@ -113,11 +132,11 @@ boolean phoneNumberEntered = false ;
 void ProcessIncomingCall() {
   uiState = UI_RCV_CALL ;
   callFromNumber = "Unknown" ;
-  
+
   // Process gsm buffer string to get incoming number
   // TODO - need AT init commands in gsm setup to present caller ID
   // TODO - need to extract caller ID from 'RING' message in gsmSerialBuffer
-  
+
   if ( screenState == screen_POWER_OFF ) {
     TurnDisplayOn() ;
   }
@@ -135,7 +154,7 @@ void ProcessIncomingCall() {
 
 void handleReceiveCall() {
   switch ( receiveCallState ) {
-    
+
     case RC_WAITING_FOR_MODEM :
       // modem is now considered IDLE, answer the phone
       SendGSMSerial( F("ATA\r") ) ;
@@ -149,14 +168,14 @@ void handleReceiveCall() {
       // Do things like update time on call etc
       // Handle key press will deal with hang up
       break ;
-      
+
     case RC_HUNG_UP :
       // Message has been displayed about hang up, wait and then go back to main menu
       if ( sliceStartTime >= nextUITime ) {
         uiState = UI_DRAW_MAIN_MENU ;
       }
       break ;
-      
+
     // Else don't do anything for other states
   }
 }
@@ -177,7 +196,7 @@ void ProcessReceiveCallHungUp() {
 }
 
 // Make Call related functions
-
+Colour drawPhoneBgColour = MAKE_CALL_NUM_COLOUR;
 void drawPhoneNumberBuffer() {
   // Draw centered phone number with space before and after (needed incase of backspace)
   oled.selectFont( Arial_Black_16 ) ;
@@ -187,15 +206,32 @@ void drawPhoneNumberBuffer() {
   displayNumber[ phoneNumBufferIndex + 1 ] = ' ' ;
   displayNumber[ phoneNumBufferIndex + 2 ] = '\0' ;
   byte posX = ( MF_MAX_X - oledStringWidth( displayNumber ) ) / 2 ;
-  oled.drawString( posX, PHONE_NUM_BUF_MIN_Y, displayNumber, MAKE_CALL_NUM_COLOUR, MAKE_CALL_BG_COLOUR ) ;
+  oled.drawString( posX, PHONE_NUM_BUF_MIN_Y, displayNumber, MAKE_CALL_NUM_COLOUR, drawPhoneBgColour) ;
 }
 
-void setupGetPhoneNumer( const uiStates returnState ) {
+void setupGetPhoneNumer( const uiStates returnState,
+    const Colour & bgColour) {
   phoneNumberEntered = false ;
   phoneNumBuffer[ 0 ] = '\0' ;
   phoneNumBufferIndex = 0 ;
   returnNumState = returnState ;
   uiState = UI_GET_PHONE_NUM ;
+  drawPhoneBgColour = bgColour;
+}
+
+void drawSMSBuffer ()
+{
+    smsBuffer[smsBufferIndex] = '\0';
+    ScreenPrint(smsBuffer);
+}
+
+void setupGetSMS( const uiStates returnState )
+{
+    smsEntered     = false;
+    smsBuffer[0]   = '\0';
+    smsBufferIndex = 0;
+    returnNumState = returnState ;
+    uiState        = UI_SEND_SMS;
 }
 
 void makeCallMenuItem() {
@@ -208,7 +244,7 @@ void makeCallMenuItem() {
   oled.drawString( 50, MF_MIN_Y + 18, F("Call"), MAKE_CALL_KEY_COLOUR, MAKE_CALL_BG_COLOUR ) ;
   oled.drawString( 73, MF_MIN_Y, F("Cancel"), MAKE_CALL_KEY_COLOUR, MAKE_CALL_BG_COLOUR ) ;
   // Setup to get a phone number and return to UI_MAKE_CALL when complete/cancelled
-  setupGetPhoneNumer( UI_MAKE_CALL ) ;
+  setupGetPhoneNumer( UI_MAKE_CALL, MAKE_CALL_BG_COLOUR ) ;
   // Initial state for making call
   makeCallState = MC_DRAW_CALLING_NUMBER ;
 }
@@ -289,19 +325,110 @@ void ProcessMakeCallResponse() {
 // SMS related functions
 
 void smsMenuItem() {
-  uiState = UI_CREATE_SMS ;
-  // Temp display message to show function was selected
-  nextUITime = sliceStartTime + 1500 ;
-  oled.drawFilledBox( MF_MIN_X, MF_MIN_Y, MF_MAX_X, MF_MAX_Y, MAIN_MENU_BG_COLOUR ) ;
-  oled.selectFont( Arial_Black_16 ) ;
-  oled.drawString( 15, 50, F("Create SMS"), STARTUP_FG_COLOUR, STARTUP_BG_COLOUR ) ;
+    uiState = UI_CREATE_SMS ;
+    // Temp display message to show function was selected
+    nextUITime = sliceStartTime + 1500 ;
+    oled.drawFilledBox( MF_MIN_X, MF_MIN_Y, MF_MAX_X, MF_MAX_Y, SEND_SMS_BG_COLOUR ) ;
+    oled.selectFont( Arial_Black_16 ) ;
+
+
+    oled.drawString( 7, MF_MAX_Y - 30, F("Enter number"), SEND_SMS_FG_COLOUR,  SEND_SMS_BG_COLOUR ) ;
+    oled.drawString( 1, MF_MIN_Y, F("Delete"),            SEND_SMS_KEY_COLOUR, SEND_SMS_BG_COLOUR ) ;
+    oled.drawString( 50, MF_MIN_Y + 18, F("Next"),        SEND_SMS_KEY_COLOUR, SEND_SMS_BG_COLOUR ) ;
+    oled.drawString( 73, MF_MIN_Y, F("Cancel"),           SEND_SMS_KEY_COLOUR, SEND_SMS_BG_COLOUR ) ;
+    // Setup to get a phone number and return to UI_MAKE_CALL when complete/cancelled
+    setupGetPhoneNumer( UI_SEND_SMS, SEND_SMS_BG_COLOUR);
+    /// I don't think I ned this, I think the buffer-full flags givce me
+    /// enough state
+    // Initial state for making call
+    makeSMSState = SMS_SEND_TEXT_MODE;
 }
 
-void handleCreateSMS() {
-  if ( sliceStartTime >= nextUITime ) {
-    // Temp return to main menu
-    uiState = UI_DRAW_MAIN_MENU ;
-  }
+void handleSendSMS()
+{
+    // if the phone number hasn't been entered yet
+    // then there's nothiung to do.
+    if (!phoneNumberEntered) return;
+
+    static bool wasEmpty = false;
+    // we have a phone number. prompt the user to enter a message
+    if (!smsBufferIndex)
+    {
+        setupGetSMS(UI_SEND_SMS);
+        oled.selectFont( Arial_Black_16 ) ;
+        oled.drawString( 50, MF_MIN_Y + 18, F("Send"),
+                         SEND_SMS_KEY_COLOUR, SEND_SMS_BG_COLOUR ) ;
+        if (!wasEmpty)
+        {
+            ScreenPrint("Please enter your message ...\n");
+        }
+    }
+    wasEmpty = !smsBufferIndex;
+    // did the SMS get entered?
+    if (smsEntered)
+    {
+        switch (makeSMSState)
+        {
+
+        case SMS_SEND_TEXT_MODE:
+        {
+            serialDebugOut (F("Selecting TEXT mode...\n"));
+            SendGSMSerial( F("AT+CMGF=1\r"));
+            makeSMSState    = SMS_WAIT_TEXT_MODE_OK;
+            gsmState        = gsm_WAIT;
+            gsmSerialState  = gsms_IDLE;
+        } break ;
+
+        case SMS_WAIT_TEXT_MODE_OK:
+        {
+            if ( gsmSerialBuffer.startsWith( "OK" ) )
+            {
+                serialDebugOut (F("Sending Phone number...\n"));
+                SendGSMSerial( F("AT + CMGS=\""));
+                // from this number
+                SendGSMSerial( phoneNumBuffer );
+                SendGSMSerial( F("\"\r"));
+                gsmState        = gsm_WAIT;
+                gsmSerialState  = gsms_IDLE;
+                makeSMSState    = SMS_WAIT_GT;
+                gsmSerialBuffer = "";
+            }
+        } break;
+
+        case SMS_WAIT_GT:
+        {
+            if ( gsmSerialBuffer.startsWith( ">" ) )
+            {
+                serialDebugOut (F("Sending SMS body...\n"));
+                SendGSMSerial( smsBuffer );
+                // CNTRL-Z
+                char junk[2];
+                junk[0] = 26;
+                junk[1] = 0;
+                SendGSMSerial(junk);
+                gsmState        = gsm_WAIT;
+                gsmSerialState  = gsms_IDLE;
+                gsmSerialBuffer = "";
+                makeSMSState    = SMS_WAIT_OK;
+            }
+        } break;
+
+        case SMS_WAIT_OK:
+        {
+            if ( gsmSerialBuffer.startsWith( "OK" ) )
+            {
+                serialDebugOut (F("SMS Sent OK!...\n"));
+                uiState         = UI_DRAW_MAIN_MENU ;
+                gsmState        = gsm_IDLE;
+                smsBufferIndex  = 0;
+            }
+            else if ( gsmSerialBuffer.startsWith( "ERROR" ) )
+            {
+                ScreenPrint("Unable to send SMS!\n");
+            }
+        } break;
+        }
+    }
 }
 
 void lockKeysMenuItem() {
@@ -488,7 +615,7 @@ void handleKeyPressed( char key ) {
           uiState = UI_DRAW_MAIN_MENU ;
         }
         break ;
-        
+
       case UI_RCV_CALL :
         switch ( receiveCallState ) {
           case RC_WAITING_FOR_ACCEPT :
@@ -500,7 +627,7 @@ void handleKeyPressed( char key ) {
               uiState = UI_DRAW_MAIN_MENU ;
             }
             break ;
-            
+
           case RC_ON_CALL :
             if ( key == 'R' || key == 'D' ) {
               // Hang up
@@ -511,6 +638,38 @@ void handleKeyPressed( char key ) {
         }
         break ;
 
+        case UI_SEND_SMS:
+        {
+            if ( key == 'U' ) {
+                /// up == done
+                smsEntered = true;
+                uiState = returnNumState;
+            } else if (key == 'L') {
+                /// left == delete
+                if (smsBufferIndex)
+                {
+                    --smsBufferIndex;
+                }
+            } else if (key == 'R') {
+                /// right == CANCEL
+                smsBufferIndex = 0;
+                uiState = UI_DRAW_MAIN_MENU;
+            } else if (key == 'D') {
+                /// right == CLEAR
+                smsBufferIndex = 0;
+            } else {
+                bool del;
+                key = translate(key,del);
+                if ((smsBufferIndex >= SMS_BUF_SIZE)
+                    ||
+                    (del && phoneNumBufferIndex))
+                {
+                    --smsBufferIndex;
+                }
+                smsBuffer[smsBufferIndex++] = key;
+            }
+            drawSMSBuffer();
+        } break;
       case UI_START_UP :
         // Abort animation and go to menu
         uiState = UI_DRAW_MAIN_MENU ;
@@ -565,12 +724,12 @@ void UISlice() {
       // Don't do anything as handled by key press event
       break ;
 
-    case UI_CREATE_SMS :
-      handleCreateSMS() ;
+    case UI_SEND_SMS :
+      handleSendSMS() ;
       break ;
 
     case UI_LOCK_KEYS :
-      handleCreateSMS() ;
+        handleLockKeys();
       break ;
   }
 }
