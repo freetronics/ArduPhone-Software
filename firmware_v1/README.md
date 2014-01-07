@@ -88,13 +88,13 @@ implemented:
  * Handle call hang up (before, during or by other party)
  * Get and display operator name in status bar
  * Receive call - display number still to be done
-
+ * Send SMS - typed number only and T9(?) style key input
+ 
 To do
 -----
 In rough order, the following features/functions are still yet to be 
 implemented:
 
- * Send SMS - typed number only and T9(?) style key input
  * Basic sound alerts on buzzer - incoming call or SMS
  * Lock / unlock keypad
  * Receive / display SMS at time - no storage
