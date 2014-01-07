@@ -18,11 +18,10 @@
  */
 
 // Includes used by any of the files should be inserted here for Arduino IDE to collate correctly
-typedef char PROGMEM prog_char;
 #include <FTOLED.h>
 #include <FTOLED_Colours.h>
 #include <progmem_compat.h>
-
+typedef char PROGMEM prog_char;
 #include <SPI.h>
 #include <SD.h>
 #include <Keypad.h>
