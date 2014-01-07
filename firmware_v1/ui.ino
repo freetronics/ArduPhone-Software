@@ -164,7 +164,7 @@ void handleReceiveCall() {
 void displayHungUp() {
   oled.drawFilledBox( MF_MIN_X, MF_MIN_Y, MF_MAX_X, MF_MAX_Y, RCV_CALL_BG_COLOUR ) ;
   oled.selectFont( Arial_Black_16 ) ;
-  oled.drawString( 7, MF_MAX_Y - 30, F("Hung up on"), RCV_CALL_FG_COLOUR, RCV_CALL_BG_COLOUR ) ;
+  oled.drawString( 13, MF_MAX_Y - 30, F("Hung up on"), RCV_CALL_FG_COLOUR, RCV_CALL_BG_COLOUR ) ;
   byte posX = ( MF_MAX_X - oledStringWidth( & callFromNumber [ 0 ] ) ) / 2 ;
   oled.drawString( posX, PHONE_NUM_BUF_MIN_Y, callFromNumber, RCV_CALL_NUM_COLOUR, RCV_CALL_BG_COLOUR ) ;
   nextUITime = sliceStartTime + RCV_CALL_HANG_UP_DISPLAY_TIME ;

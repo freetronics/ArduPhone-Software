@@ -135,6 +135,10 @@ void UpdateGSMStatusDisplay() {
         oled.drawString( GSM_MIN_X + 1, GSM_MIN_Y, F("Waiting"), ORANGE, SB_BG_COLOUR ) ;
         break ;
 
+      case gsmd_POWERING_ON_5 :
+        oled.drawString( GSM_MIN_X + 1, GSM_MIN_Y, F("Init"), ORANGE, SB_BG_COLOUR ) ;
+        break ;
+
       case gsmd_UNKNOWN :
         oled.drawString( GSM_MIN_X + 1, GSM_MIN_Y, F("Enquiring"), BLUE, SB_BG_COLOUR ) ;
         break ;

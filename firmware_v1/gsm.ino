@@ -36,6 +36,7 @@ enum gsmDisplayStatusStates {
   gsmd_POWERING_ON_3,
   gsmd_POWERING_ON_4,
   gsmd_POWERING_ON_5,
+  gsmd_POWERING_ON_6,
   gsmd_UNKNOWN,
   gsmd_NORMAL, // Also shows signal strength
   gsmd_POWER_OFF_SOFT, // Equiv to airplane mode?
@@ -61,8 +62,27 @@ byte gsmSerialBufferIndex = 0 ;
 boolean gotOperatorName = false ;
 String operatorName = "", operatorDisplayedName = "" ;
 boolean gsmOKResponse = false ;
+// Variables related to initialising the modem with AT commends
+const prog_char initModem0[] PROGMEM = "ATE0\r";
+const prog_char initModem1[] PROGMEM = "AT+COPS=1,0\r";
+const prog_char initModem2[] PROGMEM = "AT&W\r";
+const byte INIT_MODEM_NUM_ITEMS = 3 ;
+const byte INIT_MODEM_TEXT_BUF_LEN = 40 ;
+PROGMEM const char * const init_modem_table[] = {
+  initModem0,
+  initModem1,
+  initModem2
+} ;
+byte initModemIndex = 0 ;
 
 // === Functions ===
+
+String getInitModemText ( const byte itemNum ) {
+  char itemText [ INIT_MODEM_TEXT_BUF_LEN ] ;
+  strcpy_P ( itemText, ( char * ) pgm_read_word ( & ( init_modem_table[ itemNum ] ) ) ) ;
+  return itemText ;
+}
+
 
 void PowerOnGsmModule ()
 {
@@ -103,9 +123,8 @@ void PowerOnGsmModule ()
         // Wait for 'OK' response then initialise AT commands
         if ( gsmOKResponse ) {
           // GSM Modem has reposnded with OK
-          // Send initialisation string(s) and pass onto next state
-          SendGSMSerial( F("AT+COPS=1,0\r") ) ; // Return operator name in text rather than numerical format
           gsmDisplayStatus = gsmd_POWERING_ON_5 ;
+          nextGSMTime = sliceStartTime + 1000 ; // Wait before next AT command attempt
         } else {
           // Try (again) to send 'AT' command to ensure gsm modem is responding before proceeding
           SendGSMSerial( F("AT\r") ) ;
@@ -114,6 +133,20 @@ void PowerOnGsmModule ()
         break ;
 
       case gsmd_POWERING_ON_5 :
+        if ( gsmOKResponse ) {
+          if ( initModemIndex >= INIT_MODEM_NUM_ITEMS ) {
+            // All strings have been sent and modem has responded, progress to next state
+            gsmDisplayStatus = gsmd_POWERING_ON_6 ;
+            nextGSMTime = sliceStartTime +  500 ; // Wait to settle
+          } else {
+            SendGSMSerial( getInitModemText( initModemIndex ++ ) ) ; // Send next init string
+            gsmOKResponse = false ; // Now need to wait for 'OK' (or 'ERROR' which is expected for some commands)
+            nextGSMTime = sliceStartTime +  500 ; // Wait to settle
+          }
+        }
+        break ;
+
+      case gsmd_POWERING_ON_6 :
         // Should now be powered on, so go to unknown display status before polling
         gsmDisplayStatus = gsmd_UNKNOWN ;
         // Tell main state machine to start idling
@@ -198,7 +231,7 @@ void ReadGSMSerial() {
         }
 
         if ( gsmState == gsm_SETUP ) {
-          if ( gsmSerialBuffer.startsWith( "OK" ) ) {
+          if ( gsmSerialBuffer.startsWith( "OK" ) ||  gsmSerialBuffer.startsWith( "ERROR" ) ) {
             gsmOKResponse = true ;
           }
         }
