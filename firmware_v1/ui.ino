@@ -66,15 +66,15 @@ unsigned long nextUITime ;
 byte startupFrameNum = 0 ;
 // Main menu variables - these next 3 items and their arrays must be in sync
 const prog_char mainMenu0[] PROGMEM = "Call";
-const prprog_char mainMenu1[] PROGMEM = "SMS";
-const prprog_char mainMenu2[] PROGMEM = "Lock keys";
-const prprog_char mainMenu3[] PROGMEM = "Four";
-const prprog_char mainMenu4[] PROGMEM = "Five";
-const prprog_char mainMenu5[] PROGMEM = "Six";
-const prprog_char mainMenu6[] PROGMEM = "Seven";
-const prprog_char mainMenu7[] PROGMEM = "Eight";
-const prprog_char mainMenu8[] PROGMEM = "Nine";
-const prprog_char mainMenu9[] PROGMEM = "Ten";
+const prog_char mainMenu1[] PROGMEM = "SMS";
+const prog_char mainMenu2[] PROGMEM = "Lock keys";
+const prog_char mainMenu3[] PROGMEM = "Four";
+const prog_char mainMenu4[] PROGMEM = "Five";
+const prog_char mainMenu5[] PROGMEM = "Six";
+const prog_char mainMenu6[] PROGMEM = "Seven";
+const prog_char mainMenu7[] PROGMEM = "Eight";
+const prog_char mainMenu8[] PROGMEM = "Nine";
+const prog_char mainMenu9[] PROGMEM = "Ten";
 const byte MAIN_MENU_NUM_ITEMS = 10 ;
 PROGMEM const char * const main_menu_table[] = {
   mainMenu0,

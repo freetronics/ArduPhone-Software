@@ -17,6 +17,10 @@
  * Cary Dreelan - Dec 2013
  */
 
+#ifndef __PROG_TYPES_COMPAT__
+#define __PROG_TYPES_COMPAT__
+#endif
+
 // Includes used by any of the files should be inserted here for Arduino IDE to collate correctly
 #include <SPI.h>
 #include <SD.h>
