@@ -1,3 +1,4 @@
+// -*- Mode:c++ -*-
 /*
  * Freetronics ArduPhone - sound
  *
@@ -6,7 +7,7 @@
  * Cary Dreelan - Dec 2013
  */
 
- 
+
 void SoundSetup() {
   // TODO
 }

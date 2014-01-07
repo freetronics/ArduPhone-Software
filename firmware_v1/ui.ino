@@ -1,3 +1,4 @@
+// -*- Mode:c++ -*-
 /*
  * Freetronics ArduPhone - ui
  *
@@ -140,7 +141,7 @@ void handleMakeCall() {
         drawPhoneNumberBuffer() ;
         makeCallState = MC_WAITING_FOR_MODEM ;
         break ;
-      
+
       case MC_WAITING_FOR_MODEM :
         if ( gsmSerialState == gsms_IDLE && gsmState == gsm_IDLE ) {
           // modem is now considered IDLE, proceed to dial and set states
@@ -152,21 +153,21 @@ void handleMakeCall() {
           oled.drawString( 56, MF_MIN_Y, F("Hang up"), MAKE_CALL_KEY_COLOUR, MAKE_CALL_BG_COLOUR ) ;
         }
         break ;
-        
+
       case MC_DIALLING :
         // Do nothing as ReadGSMSerial will call ProcessMakeCallResponse
         break ;
-        
+
       case MC_MODEM_ERROR :
         if ( sliceStartTime >= nextUITime ) {
           // Error has been displayed for set time, return to main menu
           uiState = UI_DRAW_MAIN_MENU ;
         }
         break ;
-        
+
       case MC_ON_CALL :
         break ;
-        
+
       case MC_HANG_UP :
         // Hang up and return to main men
         SendGSMSerial( F("ATH\r") ) ;
@@ -319,13 +320,13 @@ void startupAnimation() {
 
 // Called from keypad 'module'
 void handleKeyPressed( char key ) {
-  
+
   // Check if screen is powered off and if so, turn back on
   if ( screenState == screen_POWER_OFF ) {
     TurnDisplayOn() ;
   } else {
     switch ( uiState ) {
-      
+
       case UI_MAIN_MENU :
         if ( key == 'D' ) {
           // Next menu item
@@ -354,7 +355,7 @@ void handleKeyPressed( char key ) {
           }
         }
         break ;
-        
+
       case UI_GET_PHONE_NUM :
         if ( key == 'U' ) {
           // Number is complete, pass to return state
@@ -383,7 +384,7 @@ void handleKeyPressed( char key ) {
         }
         drawPhoneNumberBuffer() ;
         break ;
-      
+
       case UI_MAKE_CALL :
         switch ( makeCallState ) {
           case MC_WAITING_FOR_MODEM :
@@ -404,12 +405,12 @@ void handleKeyPressed( char key ) {
           uiState = UI_DRAW_MAIN_MENU ;
         }
         break ;
-        
+
       case UI_START_UP :
         // Abort animation and go to menu
         uiState = UI_DRAW_MAIN_MENU ;
         break ;
-        
+
       // Else ignore the key
     }
   nextScreenOffTime = sliceStartTime + SCREEN_POWER_OFF_DELAY ; // Delay screen powering off
@@ -421,7 +422,7 @@ void handleKeyPressed( char key ) {
 void UISetup() {
   uiState = UI_UNINITIALISED ;
   nextUITime = sliceStartTime + 200 ; // wait breifly before starting UI
-  
+
 
 }
 
@@ -429,15 +430,15 @@ void UISetup() {
 
 void UISlice() {
   switch ( uiState ) {
-    
+
     case UI_UNINITIALISED :
       uiState = UI_START_UP ;
       break ;
-      
+
     case UI_START_UP :
       startupAnimation() ;
       break ;
-      
+
     case UI_DRAW_MAIN_MENU :
       drawMainMenu() ;
       uiState = UI_MAIN_MENU ;
@@ -446,11 +447,11 @@ void UISlice() {
     case UI_MAIN_MENU :
       // Don't do anything as handled by key press event
       break ;
-      
+
     case UI_MAKE_CALL :
       handleMakeCall() ;
       break ;
-      
+
     case UI_GET_PHONE_NUM :
       // Don't do anything as handled by key press event
       break ;

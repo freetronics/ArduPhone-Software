@@ -1,3 +1,4 @@
+/// -*- Mode:c++ -*-
 /*
  * Freetronics ArduPhone - util
  *

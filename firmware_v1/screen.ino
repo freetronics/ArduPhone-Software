@@ -1,3 +1,4 @@
+// -*- Mode:c++ -*-
 /*
  * Freetronics ArduPhone - screen
  *
@@ -26,7 +27,7 @@ const byte SB_MAX_Y = 126 ; // - 1 to stop wrap around to bottom bug?
 const Colour SB_BG_COLOUR = WHITE ;
 const byte SINE_FRAMES = 12 ; // Must match array size used by sineIndex (below)
 // Phone activity animation
-const byte ACTIVITY_MIN_X = SB_MAX_X - 12 ; 
+const byte ACTIVITY_MIN_X = SB_MAX_X - 12 ;
 const byte ACTIVITY_MAX_X = SB_MAX_X - 4 ; // allows for + box size
 const byte ACTIVITY_BOX_SIZE = 3 ;
 // GSM Display status (effectively left 80 pixels of status bar)
@@ -57,15 +58,15 @@ byte activityIndexY = SINE_FRAMES / 2 ;
 // === Functions ===
 
 void DrawActivityBoxes( byte xAmt, byte yAmt, Colour box1Colour, Colour box2Colour ) {
-  oled.drawFilledBox( ACTIVITY_MIN_X + xAmt, 
-                      SB_MIN_Y + 1 + yAmt, 
-                      ACTIVITY_MIN_X + xAmt + ACTIVITY_BOX_SIZE, 
-                      SB_MIN_Y + 1  + yAmt + ACTIVITY_BOX_SIZE, 
+  oled.drawFilledBox( ACTIVITY_MIN_X + xAmt,
+                      SB_MIN_Y + 1 + yAmt,
+                      ACTIVITY_MIN_X + xAmt + ACTIVITY_BOX_SIZE,
+                      SB_MIN_Y + 1  + yAmt + ACTIVITY_BOX_SIZE,
                       box1Colour ) ;
-  oled.drawFilledBox( ACTIVITY_MAX_X - xAmt, 
-                      SB_MAX_Y - 1 - yAmt, 
-                      ACTIVITY_MAX_X - xAmt + ACTIVITY_BOX_SIZE, 
-                      SB_MAX_Y - 1 - yAmt - ACTIVITY_BOX_SIZE, 
+  oled.drawFilledBox( ACTIVITY_MAX_X - xAmt,
+                      SB_MAX_Y - 1 - yAmt,
+                      ACTIVITY_MAX_X - xAmt + ACTIVITY_BOX_SIZE,
+                      SB_MAX_Y - 1 - yAmt - ACTIVITY_BOX_SIZE,
                       box2Colour ) ;
 }
 
@@ -90,7 +91,7 @@ void DrawGSMSignalStrength() {
   msg += gsmSignalStrength ;
   oled.selectFont( Droid_Sans_12 ) ;
   oled.drawString( GSM_MIN_X + 1, GSM_MIN_Y, msg, BLUE, SB_BG_COLOUR ) ;
-  
+
   // gsmSignalStrength varies from 0-31 as returned by the gsm module
   Colour meterColour = GREEN ;
   int lx, ly = 0 ;
@@ -106,7 +107,7 @@ void DrawGSMSignalStrength() {
 
 // Draw status of GSM module, inc aerial strength, if changed
 void UpdateGSMStatusDisplay() {
-  if ( gsmDisplayStatus != gsmLastDisplayedStatus || 
+  if ( gsmDisplayStatus != gsmLastDisplayedStatus ||
         gsmSignalStrength != gsmDisplayedSignalStrength ||
         operatorName != operatorDisplayedName ) {
     oled.drawFilledBox( GSM_MIN_X, GSM_MIN_Y, GSM_MAX_X, GSM_MAX_Y, SB_BG_COLOUR ) ;
@@ -117,38 +118,38 @@ void UpdateGSMStatusDisplay() {
       case gsmd_HARDWARE_OFF :
         oled.drawString( GSM_MIN_X + 1, GSM_MIN_Y, F("GSM OFF"), RED, SB_BG_COLOUR ) ;
         break ;
-  
+
       case gsmd_POWERING_ON_1 :
         oled.drawString( GSM_MIN_X + 1, GSM_MIN_Y, F("POWER ON 1"), ORANGE, SB_BG_COLOUR ) ;
         break ;
-  
+
       case gsmd_POWERING_ON_2 :
         oled.drawString( GSM_MIN_X + 1, GSM_MIN_Y, F("POWER ON 2"), ORANGE, SB_BG_COLOUR ) ;
         break ;
-  
+
       case gsmd_POWERING_ON_3 :
         oled.drawString( GSM_MIN_X + 1, GSM_MIN_Y, F("POWER ON 3"), ORANGE, SB_BG_COLOUR ) ;
         break ;
-  
+
       case gsmd_POWERING_ON_4 :
         oled.drawString( GSM_MIN_X + 1, GSM_MIN_Y, F("Waiting"), ORANGE, SB_BG_COLOUR ) ;
         break ;
-        
+
       case gsmd_UNKNOWN :
         oled.drawString( GSM_MIN_X + 1, GSM_MIN_Y, F("Enquiring"), BLUE, SB_BG_COLOUR ) ;
         break ;
-  
+
       case gsmd_NORMAL :
         // Draw aerial strength
         DrawGSMSignalStrength() ;
         // Draw Carrier name if possible
         oled.drawString( GSM_MIN_X + 35, GSM_MIN_Y, operatorName, BLACK, SB_BG_COLOUR ) ;
         break ;
-  
+
       case gsmd_POWER_OFF_SOFT :
         oled.drawString( GSM_MIN_X + 1, GSM_MIN_Y, F("A/plane mode"), RED, SB_BG_COLOUR ) ;
         break ;
-  
+
       case gsmd_POWERING_ON_SOFT :
         oled.drawString( GSM_MIN_X + 1, GSM_MIN_Y, F("Turning on"), RED, SB_BG_COLOUR ) ;
         break ;
@@ -203,7 +204,7 @@ void ScreenSetup() {
 
 void ScreenSlice() {
   switch ( screenState ) {
-    
+
     case screen_UPDATE :
       if ( ( sliceStartTime - lastScreenTime ) >= SCREEN_UPDATE_PERIOD ) {
         UpdateStatusBar() ;
@@ -220,13 +221,13 @@ void ScreenSlice() {
       screenState = screen_SETUP ;
       nextScreenOffTime = sliceStartTime + SCREEN_POWER_OFF_DELAY * 2 ; // Delay screen powering off
       break ;
-      
+
     case screen_SETUP :
       DrawStatusBar() ;
       DrawMainFrame() ;
       screenState = screen_UPDATE ;
       break ;
-      
+
     case screen_POWER_OFF :
       // Do nothing
       break ;

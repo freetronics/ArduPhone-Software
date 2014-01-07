@@ -1,3 +1,4 @@
+// -*- Mode:c++ -*-
 /*
  * Freetronics ArduPhone - gsm
  *
@@ -54,7 +55,7 @@ gsmSerialStates gsmSerialState ;
 
 unsigned long nextGSMTime ;
 byte gsmSignalStrength, gsmDisplayedSignalStrength ; // As per h/w module returned values are 0-31
-String gsmSerialBuffer ; 
+String gsmSerialBuffer ;
 byte gsmSerialBufferIndex = 0 ;
 boolean gotOperatorName = false ;
 String operatorName = "", operatorDisplayedName = "" ;
@@ -66,28 +67,28 @@ void PowerOnGsmModule ()
 {
   if ( sliceStartTime >= nextGSMTime ) {
     switch ( gsmDisplayStatus ) {
-      
+
       case gsmd_HARDWARE_OFF :
         digitalWrite( GSM_PIN_ON_KEY, HIGH ) ;
         digitalWrite( GSM_PIN_DSR_CTS, HIGH ) ;
         gsmDisplayStatus = gsmd_POWERING_ON_1 ;
         nextGSMTime = sliceStartTime + 200 ;
         break ;
-        
+
       case gsmd_POWERING_ON_1 :
         digitalWrite( GSM_PIN_ON_KEY, LOW ) ;
         digitalWrite( GSM_PIN_DSR_CTS, HIGH ) ;
         gsmDisplayStatus = gsmd_POWERING_ON_2 ;
         nextGSMTime = sliceStartTime + 2000 ;
         break ;
-        
+
       case gsmd_POWERING_ON_2 :
         digitalWrite( GSM_PIN_ON_KEY, HIGH ) ;
         digitalWrite( GSM_PIN_DSR_CTS, HIGH ) ;
         gsmDisplayStatus = gsmd_POWERING_ON_3 ;
         nextGSMTime = sliceStartTime + 2500 ;
         break ;
-        
+
       case gsmd_POWERING_ON_3 :
         digitalWrite( GSM_PIN_ON_KEY, LOW ) ;
         digitalWrite( GSM_PIN_DSR_CTS, LOW ) ;
@@ -95,7 +96,7 @@ void PowerOnGsmModule ()
         nextGSMTime = sliceStartTime +  1500 ;
         gsmOKResponse = false ; // prep next state to check getting 'OK' responses
         break ;
-        
+
       case gsmd_POWERING_ON_4 :
         // Should now be powered on
         // Wait for 'OK' response then initialise AT commands
@@ -104,7 +105,7 @@ void PowerOnGsmModule ()
           // Send initialisation string(s) and pass onto next state
           SendGSMSerial( F("AT+COPS=1,0\r") ) ; // Return operator name in text rather than numerical format
           gsmDisplayStatus = gsmd_POWERING_ON_5 ;
-        } else { 
+        } else {
           // Try (again) to send 'AT' command to ensure gsm modem is responding before proceeding
           SendGSMSerial( F("AT\r") ) ;
           nextGSMTime = sliceStartTime + 1000 ; // Wait before next AT command attempt
@@ -149,16 +150,16 @@ void ReadGSMSerial() {
     char inByte = Serial1.read() ;
     if ( inByte == 10 || inByte == 13 || gsmSerialBufferIndex == GSM_SERIAL_BUF_SIZE - 1 ) {
       // We have a end of line or full buffer, process it
-      
+
       if ( gsmSerialBufferIndex > 0 ) {
         // DEBUG - BEGIN
         serialDebugOut ( F("ReadGSMSerial -> ") ) ;
         serialDebugOut ( gsmSerialBuffer ) ;
         serialDebugOut ( F("\n") ) ;
         // DEBUG - END
-  
+
         switch ( gsmSerialState ) {
-          
+
           case gsms_ENQ_SIGNAL_STATUS :
             // Expecting either a signal or operator response
             if ( gsmSerialBuffer.startsWith( "+CSQ:" ) ) {
@@ -171,11 +172,11 @@ void ReadGSMSerial() {
               gsmState = gsm_IDLE ;
             }
             break ;
-  
+
           case gsms_DIALLING :
             ProcessMakeCallResponse() ;
             break ;
-            
+
           case gsms_IDLE :
             // Drop through to default...
             ;
@@ -183,13 +184,13 @@ void ReadGSMSerial() {
             // See if incoming RING message if not expecting anything
             ;
         }
-        
+
         if ( gsmState == gsm_SETUP ) {
           if ( gsmSerialBuffer.startsWith( "OK" ) ) {
             gsmOKResponse = true ;
           }
         }
-      
+
         // Clear the input buffer
         gsmSerialBuffer = "" ;
         gsmSerialBufferIndex = 0 ;
@@ -210,7 +211,7 @@ void SendGSMSerial( String sendBuffer ) {
   gsmSerialBufferIndex = 0 ;
   // Send the passed in buffer
   Serial1.print( sendBuffer ) ;
-  
+
   // DEBUG - BEGIN
   serialDebugOut ( F("SendGSMSerial -> ") ) ;
   serialDebugOut ( sendBuffer + "\n" ) ;
@@ -225,7 +226,7 @@ void SendGSMSerial( const __FlashStringHelper* sendBuffer ) {
   gsmSerialBufferIndex = 0 ;
   // Send the passed in buffer
   Serial1.print( sendBuffer ) ;
-  
+
   // DEBUG - BEGIN
   serialDebugOut ( F("SendGSMSerial F() -> ") ) ;
   serialDebugOut ( sendBuffer ) ;
@@ -241,7 +242,7 @@ void SendGSMSerial( char * sendBuffer ) {
   gsmSerialBufferIndex = 0 ;
   // Send the passed in buffer
   Serial1.print( sendBuffer ) ;
-  
+
   // DEBUG - BEGIN
   serialDebugOut ( F("SendGSMSerial char * () -> ") ) ;
   serialDebugOut ( sendBuffer ) ;
@@ -251,18 +252,18 @@ void SendGSMSerial( char * sendBuffer ) {
 
 void EnquireGSMStatus() {
   if ( sliceStartTime >= nextGSMTime && ( gsmSerialState == gsms_IDLE || gsmSerialState == gsms_ENQ_SIGNAL_STATUS ) ) {
-    
+
     if ( gotOperatorName ) {
       SendGSMSerial( F("AT+CSQ\r") ) ; // Get signal strength
     } else {
       SendGSMSerial( F("AT+COPS?\r") ) ; // Enquire operator name
     }
     gsmSerialState = gsms_ENQ_SIGNAL_STATUS ;
-    
+
     // Check if really got operator name as may have enquired too soon (still locating)
     // Do the test here rather than above so that enquiry alternates between two until found
     if ( operatorName.length() == 0 ) gotOperatorName = false ;
-    
+
     // Wait before requesting again
     nextGSMTime = sliceStartTime + 5000 ; // 5 seconds (GSM module doesn't seem to update signal strength faster than this)
   }
@@ -276,22 +277,22 @@ void GsmSetup() {
   pinMode( GSM_PIN_NET_OK, INPUT ) ;
   pinMode( GSM_PIN_DSR_CTS, OUTPUT ) ;
   pinMode( GSM_PIN_SENSE_1V8, INPUT ) ;
-  
+
   pinMode( GSM_PIN_SENSE_1V8, OUTPUT ) ;
   digitalWrite( GSM_PIN_SENSE_1V8, HIGH ) ; // turn on internal pull-up resistor
-  
+
   Serial1.begin( GSM_BAUD_RATE ) ;
-  
+
   // Initial state of this module
   gsmState = gsm_UNINITIALISED ;
-  
+
   // Initial state of display status
   gsmDisplayStatus = gsmd_HARDWARE_OFF ;
   gsmLastDisplayedStatus = gsmd_REDRAW ;
-  
+
   // Initial state of gsm serial
   gsmSerialState = gsms_IDLE ;
-  
+
   // Buffer to receive chars
   gsmSerialBuffer.reserve( GSM_SERIAL_BUF_SIZE ) ;
 }
@@ -305,12 +306,12 @@ void GsmSlice() {
       gsmState = gsm_SETUP ;
       gsmDisplayStatus = gsmd_HARDWARE_OFF ;
       break ;
-      
+
     case gsm_SETUP :
       PowerOnGsmModule() ;
       ReadGSMSerial() ; // Checking AT command responses
       break ;
-      
+
     case gsm_ENQ_STATUS :
       EnquireGSMStatus() ;
       ReadGSMSerial() ;

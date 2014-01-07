@@ -1,3 +1,4 @@
+/// -*- Mode:c++ -*-
 /**
  * Test of matrix keypad on ArduPhone. Open the serial monitor at
  * 38400bps, then press keys on the keypad. Detected keys will be

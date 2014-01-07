@@ -1,3 +1,4 @@
+// -*- Mode:c++ -*-
 /*
  * Freetronics ArduPhone - firmware_v1
  * - Initial firmware to support functions similar to a basic mobile phone.
@@ -12,7 +13,7 @@
  * as quickly as possible and then yield.
  *
  * Main file to incorporate all of the various functions of the system and track slice stats
- * 
+ *
  * Cary Dreelan - Dec 2013
  */
 
@@ -35,7 +36,7 @@ const byte sliceStatsShift = 12 ;
 unsigned long sliceStartTime = 0 ; // track start time of each time slice in ms
 unsigned long sliceCount = 0 ; // how many slices since last stats were output
 unsigned long sliceLastOutputTime = millis() ; // time in ms last stat about slices were output
- 
+
 void setup() {
   // Setup h/w and state machines, but don't power on
   GsmSetup() ;
@@ -45,11 +46,11 @@ void setup() {
   USBSerialSetup() ;
   UISetup() ;
 }
- 
+
 void loop() {
   // Track start time of this time slice in ms
   sliceStartTime = millis() ;
-  
+
   // Give each module a slice of time
   GsmSlice() ;
   ScreenSlice() ;
@@ -64,7 +65,7 @@ void loop() {
     serialStatsOut( F("Slices p/sec: ") ) ;
     serialStatsOut( ( sliceCount * 1000 ) >> sliceStatsShift ) ;
     serialStatsOut( F("\n") ) ;
-    
+
     // Reset for next iteration
     sliceLastOutputTime = sliceStartTime ;
     sliceCount = 0 ;

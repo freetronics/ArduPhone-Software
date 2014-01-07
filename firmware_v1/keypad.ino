@@ -1,3 +1,4 @@
+// -*- Mode:c++ -*-
 /*
  * Freetronics ArduPhone - keypad
  *
@@ -48,7 +49,7 @@ void checkKeyPressed() {
       serialDebugOut ( key ) ;
       serialDebugOut ( F("\n") ) ;
       // DEBUG - END
-      
+
       handleKeyPressed ( key ) ;
     }
     lastCheckKeyTime = sliceStartTime ;
@@ -68,11 +69,11 @@ void KeypadSlice() {
     case KEYPAD_UNINITIALISED :
       keypadState = KEYPAD_SETUP ;
       break ;
-      
+
     case KEYPAD_SETUP :
       keypadState = KEYPAD_IDLE ;
       break ;
-      
+
     case KEYPAD_IDLE :
       checkKeyPressed() ;
       break ;
