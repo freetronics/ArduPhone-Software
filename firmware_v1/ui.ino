@@ -30,11 +30,26 @@ const Colour MAKE_CALL_KEY_COLOUR = DARKGREEN ;
 const byte PHONE_NUM_BUF_MIN_Y = MF_MIN_Y + 50 ;
 const byte PHONE_NUM_BUF_SIZE = 14 ;
 const unsigned int MAKE_CALL_ERROR_DISPLAY_TIME = 3000 ; // How long to display error when dialilng
+// Receive call values
+const Colour RCV_CALL_BG_COLOUR = GREEN ;
+const Colour RCV_CALL_FG_COLOUR = YELLOW ;
+const Colour RCV_CALL_NUM_COLOUR = RED ;
+const Colour RCV_CALL_KEY_COLOUR = DARKGREEN ;
+String callFromNumber ;
+const unsigned int RCV_CALL_HANG_UP_DISPLAY_TIME = 3000 ; // How long to display when hung up
+
 
 // === States ===
 
 // uiStates enum moved to ui.h due to Arduino IDE limitation when enum used as function parameter
 uiStates uiState, returnNumState ;
+enum receiveCallStates {
+  RC_WAITING_FOR_ACCEPT,
+  RC_WAITING_FOR_MODEM,
+  RC_ON_CALL,
+  RC_HUNG_UP
+} ;
+receiveCallStates receiveCallState ;
 enum makeCallStates {
   MC_DRAW_CALLING_NUMBER,
   MC_WAITING_FOR_MODEM,
@@ -93,7 +108,75 @@ boolean phoneNumberEntered = false ;
 
 // === Functions ===
 
-// Call related functions
+// Incoming Call related functions
+
+void ProcessIncomingCall() {
+  uiState = UI_RCV_CALL ;
+  callFromNumber = "Unknown" ;
+  
+  // Process gsm buffer string to get incoming number
+  // TODO - need AT init commands in gsm setup to present caller ID
+  // TODO - need to extract caller ID from 'RING' message in gsmSerialBuffer
+  
+  if ( screenState == screen_POWER_OFF ) {
+    TurnDisplayOn() ;
+  }
+  // Draw that incoming call is happening
+  oled.drawFilledBox( MF_MIN_X, MF_MIN_Y, MF_MAX_X, MF_MAX_Y, RCV_CALL_BG_COLOUR ) ;
+  oled.selectFont( Arial_Black_16 ) ;
+  oled.drawString( 7, MF_MAX_Y - 30, F("Call from"), RCV_CALL_FG_COLOUR, RCV_CALL_BG_COLOUR ) ;
+  byte posX = ( MF_MAX_X - oledStringWidth( & callFromNumber [ 0 ] ) ) / 2 ;
+  oled.drawString( posX, PHONE_NUM_BUF_MIN_Y, callFromNumber, RCV_CALL_NUM_COLOUR, RCV_CALL_BG_COLOUR ) ;
+  oled.drawString( 1, MF_MIN_Y, F("Answer"), RCV_CALL_KEY_COLOUR, RCV_CALL_BG_COLOUR ) ;
+  oled.drawString( 70, MF_MIN_Y, F("Hangup"), RCV_CALL_KEY_COLOUR, RCV_CALL_BG_COLOUR ) ;
+  // Initial state for making call
+  receiveCallState = RC_WAITING_FOR_ACCEPT ;
+}
+
+void handleReceiveCall() {
+  switch ( receiveCallState ) {
+    
+    case RC_WAITING_FOR_MODEM :
+      // modem is now considered IDLE, answer the phone
+      SendGSMSerial( F("ATA\r") ) ;
+      receiveCallState = RC_ON_CALL ;
+      oled.selectFont( Arial_Black_16 ) ;
+      oled.drawFilledBox( MF_MIN_X, MF_MIN_Y, MF_MAX_X, MF_MAX_Y, RCV_CALL_BG_COLOUR ) ;
+      oled.drawString( 70, MF_MIN_Y, F("Hang up"), MAKE_CALL_KEY_COLOUR, MAKE_CALL_BG_COLOUR ) ;
+      break ;
+
+    case RC_ON_CALL :
+      // Do things like update time on call etc
+      // Handle key press will deal with hang up
+      break ;
+      
+    case RC_HUNG_UP :
+      // Message has been displayed about hang up, wait and then go back to main menu
+      if ( sliceStartTime >= nextUITime ) {
+        uiState = UI_DRAW_MAIN_MENU ;
+      }
+      break ;
+      
+    // Else don't do anything for other states
+  }
+}
+
+void displayHungUp() {
+  oled.drawFilledBox( MF_MIN_X, MF_MIN_Y, MF_MAX_X, MF_MAX_Y, RCV_CALL_BG_COLOUR ) ;
+  oled.selectFont( Arial_Black_16 ) ;
+  oled.drawString( 7, MF_MAX_Y - 30, F("Hung up on"), RCV_CALL_FG_COLOUR, RCV_CALL_BG_COLOUR ) ;
+  byte posX = ( MF_MAX_X - oledStringWidth( & callFromNumber [ 0 ] ) ) / 2 ;
+  oled.drawString( posX, PHONE_NUM_BUF_MIN_Y, callFromNumber, RCV_CALL_NUM_COLOUR, RCV_CALL_BG_COLOUR ) ;
+  nextUITime = sliceStartTime + RCV_CALL_HANG_UP_DISPLAY_TIME ;
+  receiveCallState = RC_HUNG_UP ;
+}
+
+void ProcessReceiveCallHungUp() {
+  // Other party has hung up
+  displayHungUp() ;
+}
+
+// Make Call related functions
 
 void drawPhoneNumberBuffer() {
   // Draw centered phone number with space before and after (needed incase of backspace)
@@ -405,6 +488,28 @@ void handleKeyPressed( char key ) {
           uiState = UI_DRAW_MAIN_MENU ;
         }
         break ;
+        
+      case UI_RCV_CALL :
+        switch ( receiveCallState ) {
+          case RC_WAITING_FOR_ACCEPT :
+            if ( key == 'U' || key == 'L' ) {
+              // Answer the call
+              receiveCallState = RC_WAITING_FOR_MODEM ; // which will then answer call
+            } else if ( key == 'R' || key == 'D' ) {
+              // Hang up / Ignore the call
+              uiState = UI_DRAW_MAIN_MENU ;
+            }
+            break ;
+            
+          case RC_ON_CALL :
+            if ( key == 'R' || key == 'D' ) {
+              // Hang up
+              SendGSMSerial( F("ATH\r") ) ;
+              displayHungUp() ;
+            }
+            break ;
+        }
+        break ;
 
       case UI_START_UP :
         // Abort animation and go to menu
@@ -450,6 +555,10 @@ void UISlice() {
 
     case UI_MAKE_CALL :
       handleMakeCall() ;
+      break ;
+
+    case UI_RCV_CALL :
+      handleReceiveCall() ;
       break ;
 
     case UI_GET_PHONE_NUM :

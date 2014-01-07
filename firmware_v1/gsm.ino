@@ -47,7 +47,8 @@ gsmDisplayStatusStates gsmDisplayStatus, gsmLastDisplayedStatus ;
 enum gsmSerialStates {
   gsms_IDLE,
   gsms_ENQ_SIGNAL_STATUS,
-  gsms_DIALLING
+  gsms_DIALLING,
+  gsms_INCOMING_CALL
 } ;
 gsmSerialStates gsmSerialState ;
 
@@ -176,13 +177,24 @@ void ReadGSMSerial() {
           case gsms_DIALLING :
             ProcessMakeCallResponse() ;
             break ;
+            
+          case gsms_INCOMING_CALL :
+            if ( gsmSerialBuffer.startsWith( "NO CARRIER" ) ) {
+              // Other party hung up
+              ProcessReceiveCallHungUp() ;
+              gsmSerialState = gsms_IDLE ;
+            }
+            break ;
 
           case gsms_IDLE :
             // Drop through to default...
             ;
           default :
             // See if incoming RING message if not expecting anything
-            ;
+            if ( gsmSerialBuffer.startsWith( "RING" ) ) {
+              ProcessIncomingCall() ;
+              gsmSerialState = gsms_INCOMING_CALL ;
+            }
         }
 
         if ( gsmState == gsm_SETUP ) {

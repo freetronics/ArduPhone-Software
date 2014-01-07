@@ -87,6 +87,7 @@ implemented:
  * Initiate call - typed number only
  * Handle call hang up (before, during or by other party)
  * Get and display operator name in status bar
+ * Receive call - display number still to be done
 
 To do
 -----
@@ -96,7 +97,6 @@ implemented:
  * Send SMS - typed number only and T9(?) style key input
  * Basic sound alerts on buzzer - incoming call or SMS
  * Lock / unlock keypad
- * Receive call - display number
  * Receive / display SMS at time - no storage
  * Create phone book entry - save on SIM
  * Initiate call from phone book
@@ -123,11 +123,3 @@ around the same time as GSM module UART is receiving.
 Initiating a connection to the USB serial UART effectively resets the
 phone. This has yet to be investigated as to whether this side effect
 can be disabled.
-
-NOTE
-----
-This is an early *ALPHA* release. While it should compile and run the 
-listed features, it is not yet considered complete for the 2014 
-Arduino Mini Conf. As more code is implemented, this document will be
-updated and items in the to do list will be moved into the features
-list.
