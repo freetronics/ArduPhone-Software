@@ -34,7 +34,7 @@ const unsigned int MAKE_CALL_ERROR_DISPLAY_TIME = 3000 ; // How long to display 
 // === States ===
 
 // uiStates enum moved to ui.h due to Arduino IDE limitation when enum used as function parameter
-uiStates uiState, returnNumState ;
+int uiState, returnNumState ;
 enum makeCallStates {
   MC_DRAW_CALLING_NUMBER,
   MC_WAITING_FOR_MODEM,
@@ -50,18 +50,18 @@ makeCallStates makeCallState ;
 unsigned long nextUITime ;
 byte startupFrameNum = 0 ;
 // Main menu variables - these next 3 items and their arrays must be in sync
-prog_char mainMenu0[] PROGMEM = "Call";
-prog_char mainMenu1[] PROGMEM = "SMS";
-prog_char mainMenu2[] PROGMEM = "Lock keys";
-prog_char mainMenu3[] PROGMEM = "Four";
-prog_char mainMenu4[] PROGMEM = "Five";
-prog_char mainMenu5[] PROGMEM = "Six";
-prog_char mainMenu6[] PROGMEM = "Seven";
-prog_char mainMenu7[] PROGMEM = "Eight";
-prog_char mainMenu8[] PROGMEM = "Nine";
-prog_char mainMenu9[] PROGMEM = "Ten";
+const prog_char mainMenu0[] PROGMEM = "Call";
+const prog_char mainMenu1[] PROGMEM = "SMS";
+const prog_char mainMenu2[] PROGMEM = "Lock keys";
+const prog_char mainMenu3[] PROGMEM = "Four";
+const prog_char mainMenu4[] PROGMEM = "Five";
+const prog_char mainMenu5[] PROGMEM = "Six";
+const prog_char mainMenu6[] PROGMEM = "Seven";
+const prog_char mainMenu7[] PROGMEM = "Eight";
+const prog_char mainMenu8[] PROGMEM = "Nine";
+const prog_char mainMenu9[] PROGMEM = "Ten";
 const byte MAIN_MENU_NUM_ITEMS = 10 ;
-PROGMEM const char * main_menu_table[] = {
+const PROGMEM char* const main_menu_table[] = {
   mainMenu0,
   mainMenu1,
   mainMenu2,
@@ -107,7 +107,7 @@ void drawPhoneNumberBuffer() {
   oled.drawString( posX, PHONE_NUM_BUF_MIN_Y, displayNumber, MAKE_CALL_NUM_COLOUR, MAKE_CALL_BG_COLOUR ) ;
 }
 
-void setupGetPhoneNumer( const uiStates returnState ) {
+void setupGetPhoneNumer( const int returnState ) {
   phoneNumberEntered = false ;
   phoneNumBuffer[ 0 ] = '\0' ;
   phoneNumBufferIndex = 0 ;
