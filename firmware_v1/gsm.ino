@@ -64,12 +64,12 @@ boolean gotOperatorName = false ;
 String operatorName = "", operatorDisplayedName = "" ;
 boolean gsmOKResponse = false ;
 // Variables related to initialising the modem with AT commends
-const prog_char initModem0[] PROGMEM = "ATE0\r";
-const prog_char initModem1[] PROGMEM = "AT+COPS=1,0\r";
-const prog_char initModem2[] PROGMEM = "AT&W\r";
+const char initModem0[] PROGMEM = "ATE0\r";
+const char initModem1[] PROGMEM = "AT+COPS=1,0\r";
+const char initModem2[] PROGMEM = "AT&W\r";
 const byte INIT_MODEM_NUM_ITEMS = 3 ;
 const byte INIT_MODEM_TEXT_BUF_LEN = 40 ;
-PROGMEM const char * const init_modem_table[] = {
+const char * const init_modem_table[] PROGMEM = {
   initModem0,
   initModem1,
   initModem2
