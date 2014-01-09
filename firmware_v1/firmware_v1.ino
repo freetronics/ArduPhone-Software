@@ -29,8 +29,8 @@
 
 // === Constants ===
 // used for stats - first is power of 2 of second for division
-const int sliceStatsPeriod = 4096 ; // in ms (2^12)
-const byte sliceStatsShift = 12 ;
+const int SLICE_STATS_PERIOD = 4096 ; // in ms (2^12)
+const byte SLICE_STATS_SHIFT = 12 ;
 
 // Globals
 unsigned long sliceStartTime = 0 ; // track start time of each time slice in ms
@@ -61,9 +61,9 @@ void loop() {
 
   // Gather/output some stats
   sliceCount ++ ;
-  if ( ( sliceStartTime - sliceLastOutputTime ) >= sliceStatsPeriod ) {
+  if ( ( sliceStartTime - sliceLastOutputTime ) >= SLICE_STATS_PERIOD ) {
     serialStatsOut( F("Slices p/sec: ") ) ;
-    serialStatsOut( ( sliceCount * 1000 ) >> sliceStatsShift ) ;
+    serialStatsOut( ( sliceCount * 1000 ) >> SLICE_STATS_SHIFT ) ;
     serialStatsOut( F("\n") ) ;
 
     // Reset for next iteration
