@@ -89,6 +89,8 @@ implemented:
  * Get and display operator name in status bar
  * Receive call - display number still to be done
  * Send SMS - typed number only and T9(?) style key input
+ * Send SMS now includes upper AND lower case as well as further status
+   messages
  
 To do
 -----

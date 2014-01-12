@@ -5,6 +5,7 @@
  * Functions related to the keypad - keys being pressed etc.
  *
  * Cary Dreelan - Dec 2013
+ * Thomas Sprinkmeier - Jan 2014 (SMS functionality)
  */
 
 
@@ -37,7 +38,9 @@ char keys[ KEYPAD_ROWS ][ KEYPAD_COLS ] = {
 // https://en.wikipedia.org/wiki/Telephone_keypad
 // https://en.wikipedia.org/wiki/E.161
 /*
-
+  The letters are defined.
+  Other stuff is not (symbols, punctuation etc.)
+  Modify the xlate_* strings below to alter the translation table
     0 = none (in some telephones, "OPERATOR" or "OPER")
     1 = none (in some older telephones, QZ)
     2 = ABC
@@ -48,16 +51,37 @@ char keys[ KEYPAD_ROWS ][ KEYPAD_COLS ] = {
     7 = PQRS (in some older telephones, PRS)
     8 = TUV
     9 = WXYZ (in some older telephones, WXY)
-
-/// TODO: lower-case, symbols, move to PROGMEM
 */
-char * keys2[ ] = {
-  "1!@$%^&()",     "2ABC","3DEF",
-  "4GHI",          "5JKL","6MNO",
-  "7PQRS",         "8TUV","9WXYZ",
-  "*-=_+[]{}\\|",  "0 ",  "#;':\",./<>?",
-  0,
+/// TODO: lower-case
+/// store in PROGMEM to save precious RAM
+/// http://www.arduino.cc/en/Reference/PROGMEM
+/// These strings provide alternate characters
+/// "<character on keypad><alt1><alt2><alt3>..."
+const char xlate_0[] PROGMEM = "0 ";
+const char xlate_1[] PROGMEM = "1!@$%^&()";
+const char xlate_2[] PROGMEM = "2ABC";
+const char xlate_3[] PROGMEM = "3DEF";
+const char xlate_4[] PROGMEM = "4GHI";
+const char xlate_5[] PROGMEM = "5JKL";
+const char xlate_6[] PROGMEM = "6MNO";
+const char xlate_7[] PROGMEM = "7PQRS";
+const char xlate_8[] PROGMEM = "8TUV";
+const char xlate_9[] PROGMEM = "9WXYZ";
+const char xlate_S[] PROGMEM = "*-=_+[]{}\\|"; // Star
+const char xlate_H[] PROGMEM = "#;':\",./<>?"; // Hash
+// make sure you adjust this if you modify the xlate strings!
+#define MAX_XLATE_LENGTH  12
+// list of translation strings
+PROGMEM const char * const xlate[] =
+{
+    xlate_1,    xlate_2,    xlate_3,
+    xlate_4,    xlate_5,    xlate_6,
+    xlate_7,    xlate_8,    xlate_9,
+    xlate_S,    xlate_0,    xlate_H,
 };
+const byte NUM_XLATE_STRINGS =
+    sizeof(xlate)/
+    sizeof(*xlate);
 
 byte keypadRowPins[ KEYPAD_ROWS ] = { A6, A4, A3, A2, A1, A0 } ;  // 25, 27, 28, 29, 30, 31
 byte keypadColPins[ KEYPAD_COLS ] = { A5, A7, 23 } ;              // 26, 24, 23
@@ -125,25 +149,36 @@ char translate(char raw, bool & del)
   // is pressed within the timeout
   del = same && !old;
 
+  // use the lower-case version of the symbol
+  static bool useLower = false;
+
   // not translating/deleting? reset the character index
   // (i.e. "2ABC" starts by returning "A")
   if (!del)
   {
-    lastChr = 0;
+    lastChr  = 0;
+    useLower = false;
   }
 
   // need to translate...
-  for (unsigned i = 0; keys2[i]; ++i)
+  for (unsigned i = 0; i < NUM_XLATE_STRINGS; ++i)
   {
-    // try to find the key in the translation table
-    if (raw != keys2[i][0]) continue;
-    // advance character index, wrapping if neded
-    if (!keys2[i][++lastChr]) lastChr = 0;
-    // return the translated character
-    return keys2[i][lastChr];
+      // move the translation string to RAM to make it easier to use...
+      char buff[MAX_XLATE_LENGTH+1];
+      strcpy_P(buff, (char*)pgm_read_word(&(xlate[i])));
+
+      // try to find the key in the translation table
+      if (raw != *buff) continue;
+      // advance character index, wrapping if neded
+      if (!buff[++lastChr])
+      {
+          lastChr = 0;
+          // on wrap-around toggle use-lower flag
+          useLower = !useLower;
+      }
+      // return the translated character
+      return useLower ? tolower(buff[lastChr]) : buff[lastChr];
   }
-  // the translation table contains all the keys, so we should never get here.
-  // keep this though, we can remove keys with a single translation option
-  // later to save space.
+  // the key isn't in the translation table, don't translate it.
   return raw;
 }

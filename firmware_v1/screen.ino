@@ -5,6 +5,7 @@
  * Functions related to the OLED128 screen
  *
  * Cary Dreelan - Dec 2013
+ * Thomas Sprinkmeier - Jan 2014 (SMS functionality)
  */
 
 // === Constants ===
@@ -35,6 +36,10 @@ const byte GSM_MIN_X = SB_MIN_X ;
 const byte GSM_MIN_Y = SB_MIN_Y + 1 ;
 const byte GSM_MAX_X = SB_MIN_X + 80 ;
 const byte GSM_MAX_Y = SB_MAX_Y ;
+// SMS dimensions/offset
+const byte SMS_MIN_Y = MF_MIN_Y+35;
+const byte SMS_COLS  = 128;
+const byte SMS_ROWS  = 75;
 // update to suit. make them parameters?
 const Colour SCREEN_PRINT_BG_COLOUR = YELLOW ;
 const Colour SCREEN_PRINT_FG_COLOUR = BLUE ;
@@ -53,7 +58,7 @@ screenStates screenState ;
 // === Variables ===
 
 OLED oled( OLED_PIN_CS, OLED_PIN_DC, OLED_PIN_RESET ) ;
-OLED_TextBox box(oled, MF_MIN_X, MF_MIN_Y+35, 128, 75);
+OLED_TextBox box(oled, MF_MIN_X, SMS_MIN_Y, SMS_COLS, SMS_ROWS);
 
 unsigned long lastScreenTime, nextScreenOffTime ;
 byte sineIndex [ SINE_FRAMES ] = { 0, 1, 2, 4, 6, 7, 8, 7, 6, 4, 2, 1 } ;

@@ -5,6 +5,7 @@
  * Functions related to running the user interface.
  *
  * Cary Dreelan - Dec 2013
+ * Thomas Sprinkmeier - Jan 2014 (SMS functionality)
  */
 
 
@@ -38,10 +39,12 @@ const Colour RCV_CALL_NUM_COLOUR = RED ;
 const Colour RCV_CALL_KEY_COLOUR = DARKGREEN ;
 String callFromNumber ;
 const unsigned int RCV_CALL_HANG_UP_DISPLAY_TIME = 3000 ; // How long to display when hung up
-// Send SMS colours
+// Send SMS values
 const Colour SEND_SMS_FG_COLOUR  = YELLOW;
 const Colour SEND_SMS_BG_COLOUR  = GREEN;
 const Colour SEND_SMS_KEY_COLOUR = DARKGREEN;
+const unsigned int SEND_SMS_DISPLAY_RESULT_DELAY = 2000 ; // How long to wait after displaying result
+
 
 // === States ===
 
@@ -67,10 +70,16 @@ makeCallStates makeCallState ;
 
 enum makeSMSStates {
     /// SMS states
+    /// set SMS text mode
     SMS_SEND_TEXT_MODE,
+    /// wait for modem to acknowlege text mode
     SMS_WAIT_TEXT_MODE_OK,
+    /// wait for ">" prompt to send SMS body
     SMS_WAIT_GT,
+    /// wait for SMS delivery notification
     SMS_WAIT_OK,
+    /// Display outcome
+    SMS_DISPLAY_RESULT
 } ;
 makeSMSStates makeSMSState ;
 
@@ -90,7 +99,6 @@ const char mainMenu6[] PROGMEM = "Seven";
 const char mainMenu7[] PROGMEM = "Eight";
 const char mainMenu8[] PROGMEM = "Nine";
 const char mainMenu9[] PROGMEM = "Ten";
-const byte MAIN_MENU_NUM_ITEMS = 10 ;
 PROGMEM const char * const main_menu_table[] = {
   mainMenu0,
   mainMenu1,
@@ -103,8 +111,11 @@ PROGMEM const char * const main_menu_table[] = {
   mainMenu8,
   mainMenu9
 } ;
+const byte MAIN_MENU_NUM_ITEMS =
+    sizeof(main_menu_table)/
+    sizeof(*main_menu_table);
 typedef void ( * FunctionPointer ) ();
-FunctionPointer main_menu_functions[] = {
+FunctionPointer main_menu_functions[MAIN_MENU_NUM_ITEMS] = {
   makeCallMenuItem,
   smsMenuItem,
   lockKeysMenuItem,
@@ -331,16 +342,13 @@ void smsMenuItem() {
     oled.drawFilledBox( MF_MIN_X, MF_MIN_Y, MF_MAX_X, MF_MAX_Y, SEND_SMS_BG_COLOUR ) ;
     oled.selectFont( Arial_Black_16 ) ;
 
-
     oled.drawString( 7, MF_MAX_Y - 30, F("Enter number"), SEND_SMS_FG_COLOUR,  SEND_SMS_BG_COLOUR ) ;
     oled.drawString( 1, MF_MIN_Y, F("Delete"),            SEND_SMS_KEY_COLOUR, SEND_SMS_BG_COLOUR ) ;
     oled.drawString( 50, MF_MIN_Y + 18, F("Next"),        SEND_SMS_KEY_COLOUR, SEND_SMS_BG_COLOUR ) ;
     oled.drawString( 73, MF_MIN_Y, F("Cancel"),           SEND_SMS_KEY_COLOUR, SEND_SMS_BG_COLOUR ) ;
     // Setup to get a phone number and return to UI_MAKE_CALL when complete/cancelled
     setupGetPhoneNumer( UI_SEND_SMS, SEND_SMS_BG_COLOUR);
-    /// I don't think I ned this, I think the buffer-full flags givce me
-    /// enough state
-    // Initial state for making call
+    // First state in SMS delivery state machine (after phone/text entry)
     makeSMSState = SMS_SEND_TEXT_MODE;
 }
 
@@ -350,6 +358,7 @@ void handleSendSMS()
     // then there's nothiung to do.
     if (!phoneNumberEntered) return;
 
+    // state variable to avoid refresh/flicker of prompt
     static bool wasEmpty = false;
     // we have a phone number. prompt the user to enter a message
     if (!smsBufferIndex)
@@ -365,69 +374,101 @@ void handleSendSMS()
     }
     wasEmpty = !smsBufferIndex;
     // did the SMS get entered?
-    if (smsEntered)
-    {
-        switch (makeSMSState)
-        {
+    if (!smsEntered) return;
 
-        case SMS_SEND_TEXT_MODE:
+    /// SMS delivery state machine
+    switch (makeSMSState)
+    {
+        // make sure the modem is in TEXT mode
+    case SMS_SEND_TEXT_MODE:
+    {
+        // Tell user what's happening and clear the button menu
+        ScreenPrint("Sending message...\n");
+        oled.drawFilledBox( MF_MIN_X, MF_MIN_Y, MF_MAX_X, MF_MIN_Y + 36, SEND_SMS_BG_COLOUR ) ;
+
+        serialDebugOut (F("Selecting TEXT mode...\n"));
+        SendGSMSerial( F("AT+CMGF=1\r"));
+        makeSMSState    = SMS_WAIT_TEXT_MODE_OK;
+        // disable the periodic query to avoid aborting the SMS
+        gsmState        = gsm_WAIT;
+        gsmSerialState  = gsms_IDLE;
+    } break ;
+
+    // wait for the modem to acknowlege TEXT mode
+    // then enter the phone number
+    case SMS_WAIT_TEXT_MODE_OK:
+    {
+        if ( gsmSerialBuffer.startsWith( "OK" ) )
         {
-            serialDebugOut (F("Selecting TEXT mode...\n"));
-            SendGSMSerial( F("AT+CMGF=1\r"));
-            makeSMSState    = SMS_WAIT_TEXT_MODE_OK;
+            serialDebugOut (F("Sending Phone number...\n"));
+            SendGSMSerial( F("AT + CMGS=\""));
+            // from this number
+            SendGSMSerial( phoneNumBuffer );
+            SendGSMSerial( F("\"\r"));
             gsmState        = gsm_WAIT;
             gsmSerialState  = gsms_IDLE;
-        } break ;
-
-        case SMS_WAIT_TEXT_MODE_OK:
-        {
-            if ( gsmSerialBuffer.startsWith( "OK" ) )
-            {
-                serialDebugOut (F("Sending Phone number...\n"));
-                SendGSMSerial( F("AT + CMGS=\""));
-                // from this number
-                SendGSMSerial( phoneNumBuffer );
-                SendGSMSerial( F("\"\r"));
-                gsmState        = gsm_WAIT;
-                gsmSerialState  = gsms_IDLE;
-                makeSMSState    = SMS_WAIT_GT;
-                gsmSerialBuffer = "";
-            }
-        } break;
-
-        case SMS_WAIT_GT:
-        {
-            if ( gsmSerialBuffer.startsWith( ">" ) )
-            {
-                serialDebugOut (F("Sending SMS body...\n"));
-                SendGSMSerial( smsBuffer );
-                // CNTRL-Z
-                char junk[2];
-                junk[0] = 26;
-                junk[1] = 0;
-                SendGSMSerial(junk);
-                gsmState        = gsm_WAIT;
-                gsmSerialState  = gsms_IDLE;
-                gsmSerialBuffer = "";
-                makeSMSState    = SMS_WAIT_OK;
-            }
-        } break;
-
-        case SMS_WAIT_OK:
-        {
-            if ( gsmSerialBuffer.startsWith( "OK" ) )
-            {
-                serialDebugOut (F("SMS Sent OK!...\n"));
-                uiState         = UI_DRAW_MAIN_MENU ;
-                gsmState        = gsm_IDLE;
-                smsBufferIndex  = 0;
-            }
-            else if ( gsmSerialBuffer.startsWith( "ERROR" ) )
-            {
-                ScreenPrint("Unable to send SMS!\n");
-            }
-        } break;
+            makeSMSState    = SMS_WAIT_GT;
+            gsmSerialBuffer = "";
         }
+    } break;
+
+    // wait for the ">" prompt indicating the modem is ready for the SMS body
+    case SMS_WAIT_GT:
+    {
+        if ( gsmSerialBuffer.startsWith( ">" ) )
+        {
+            serialDebugOut (F("Sending SMS body...\n"));
+            SendGSMSerial( smsBuffer );
+            // CNTRL-Z
+            char junk[2];
+            junk[0] = 26;
+            junk[1] = 0;
+            SendGSMSerial(junk);
+            gsmState        = gsm_WAIT;
+            gsmSerialState  = gsms_IDLE;
+            gsmSerialBuffer = "";
+            makeSMSState    = SMS_WAIT_OK;
+        }
+    } break;
+
+    // wait for delivery notification
+    case SMS_WAIT_OK:
+    {
+        if ( gsmSerialBuffer.startsWith( "OK" ) )
+        {
+            serialDebugOut (F("SMS Sent OK!...\n"));
+            // Tell user message was sent
+            ScreenPrint("Message sent\n");
+            // Wait for message to be displayed
+            nextUITime = sliceStartTime + SEND_SMS_DISPLAY_RESULT_DELAY ; // Wait while message displayed
+            makeSMSState    = SMS_DISPLAY_RESULT ;
+        }
+        else if ( gsmSerialBuffer.startsWith( "ERROR" ) )
+        {
+            serialDebugOut (F("Unable to send SMS!\n"));
+            // Tell user message was NOT sent
+            ScreenPrint("Unable to send SMS!\n");
+
+            // now what? try again? store the SMS on the SIM?
+
+            // Wait for message to be displayed
+            nextUITime = sliceStartTime + SEND_SMS_DISPLAY_RESULT_DELAY ; // Wait while message displayed
+            makeSMSState    = SMS_DISPLAY_RESULT ;
+        }
+    } break;
+    
+    // Wait while user result of sending sms
+    case SMS_DISPLAY_RESULT :
+    {
+      if ( sliceStartTime >= nextUITime ) 
+      {
+        // Finished displaying message, return to main menu and reset states
+        uiState         = UI_DRAW_MAIN_MENU;
+        gsmState        = gsm_IDLE;
+        smsBufferIndex  = 0;
+      }
+    } break ;
+    
     }
 }
 
