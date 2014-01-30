@@ -66,7 +66,7 @@ will be compromised.
 Features
 --------
 The following features/functions of the code or framework have been 
-implemented:
+implemented in roughly the following order:
 
  * Initial file structure
  * Multi-tasking and initial state machines
@@ -87,10 +87,11 @@ implemented:
  * Initiate call - typed number only
  * Handle call hang up (before, during or by other party)
  * Get and display operator name in status bar
- * Receive call - display number still to be done
+ * Receive call
  * Send SMS - typed number only and T9(?) style key input
  * Send SMS now includes upper AND lower case as well as further status
    messages
+ * Receive call now shows incoming number if available
  
 To do
 -----

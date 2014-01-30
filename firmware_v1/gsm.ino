@@ -66,13 +66,15 @@ boolean gsmOKResponse = false ;
 // Variables related to initialising the modem with AT commends
 const char initModem0[] PROGMEM = "ATE0\r";
 const char initModem1[] PROGMEM = "AT+COPS=1,0\r";
-const char initModem2[] PROGMEM = "AT&W\r";
-const byte INIT_MODEM_NUM_ITEMS = 3 ;
+const char initModem2[] PROGMEM = "AT+CLIP=1\r";
+const char initModem3[] PROGMEM = "AT&W\r";
+const byte INIT_MODEM_NUM_ITEMS = 4 ;
 const byte INIT_MODEM_TEXT_BUF_LEN = 40 ;
 const char * const init_modem_table[] PROGMEM = {
   initModem0,
   initModem1,
-  initModem2
+  initModem2,
+  initModem3
 } ;
 byte initModemIndex = 0 ;
 
@@ -218,6 +220,8 @@ void ReadGSMSerial() {
               // Other party hung up
               ProcessReceiveCallHungUp() ;
               gsmSerialState = gsms_IDLE ;
+            } else if ( gsmSerialBuffer.startsWith( "+CLIP:" ) ) {
+              ProcessReceiveCallNumber() ;
             }
             break ;
 

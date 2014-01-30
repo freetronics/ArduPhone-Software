@@ -37,7 +37,6 @@ const Colour RCV_CALL_BG_COLOUR = GREEN ;
 const Colour RCV_CALL_FG_COLOUR = YELLOW ;
 const Colour RCV_CALL_NUM_COLOUR = RED ;
 const Colour RCV_CALL_KEY_COLOUR = DARKGREEN ;
-String callFromNumber ;
 const unsigned int RCV_CALL_HANG_UP_DISPLAY_TIME = 3000 ; // How long to display when hung up
 // Send SMS values
 const Colour SEND_SMS_FG_COLOUR  = YELLOW;
@@ -130,6 +129,8 @@ FunctionPointer main_menu_functions[MAIN_MENU_NUM_ITEMS] = {
 
 byte curMenuItem = 0, lastMenuItem = 0 ;
 char phoneNumBuffer[ PHONE_NUM_BUF_SIZE ] ;
+String callFromNumber ;
+boolean gotCallFromNumber = false ;
 char smsBuffer[ SMS_BUF_SIZE ];
 byte phoneNumBufferIndex ;
 unsigned char smsBufferIndex;
@@ -140,9 +141,17 @@ boolean smsEntered = false ;
 
 // Incoming Call related functions
 
+void DrawIncomingCallNumber() {
+  oled.selectFont( Arial_Black_16 ) ;
+  oled.drawFilledBox( MF_MIN_X, PHONE_NUM_BUF_MIN_Y, MF_MAX_X, PHONE_NUM_BUF_MIN_Y + 16, RCV_CALL_BG_COLOUR ) ;
+  byte posX = ( MF_MAX_X - oledStringWidth( & callFromNumber [ 0 ] ) ) / 2 ;
+  oled.drawString( posX, PHONE_NUM_BUF_MIN_Y, callFromNumber, RCV_CALL_NUM_COLOUR, RCV_CALL_BG_COLOUR ) ;
+}
+
 void ProcessIncomingCall() {
   uiState = UI_RCV_CALL ;
   callFromNumber = "Unknown" ;
+  gotCallFromNumber = false ;
 
   // Process gsm buffer string to get incoming number
   // TODO - need AT init commands in gsm setup to present caller ID
@@ -153,10 +162,8 @@ void ProcessIncomingCall() {
   }
   // Draw that incoming call is happening
   oled.drawFilledBox( MF_MIN_X, MF_MIN_Y, MF_MAX_X, MF_MAX_Y, RCV_CALL_BG_COLOUR ) ;
-  oled.selectFont( Arial_Black_16 ) ;
-  oled.drawString( 7, MF_MAX_Y - 30, F("Call from"), RCV_CALL_FG_COLOUR, RCV_CALL_BG_COLOUR ) ;
-  byte posX = ( MF_MAX_X - oledStringWidth( & callFromNumber [ 0 ] ) ) / 2 ;
-  oled.drawString( posX, PHONE_NUM_BUF_MIN_Y, callFromNumber, RCV_CALL_NUM_COLOUR, RCV_CALL_BG_COLOUR ) ;
+  DrawIncomingCallNumber() ; // Also sets oled.selectFont
+  oled.drawString( 26, MF_MAX_Y - 30, F("Call from"), RCV_CALL_FG_COLOUR, RCV_CALL_BG_COLOUR ) ;
   oled.drawString( 1, MF_MIN_Y, F("Answer"), RCV_CALL_KEY_COLOUR, RCV_CALL_BG_COLOUR ) ;
   oled.drawString( 70, MF_MIN_Y, F("Hangup"), RCV_CALL_KEY_COLOUR, RCV_CALL_BG_COLOUR ) ;
   // Initial state for making call
@@ -204,6 +211,23 @@ void displayHungUp() {
 void ProcessReceiveCallHungUp() {
   // Other party has hung up
   displayHungUp() ;
+}
+
+void ProcessReceiveCallNumber() {
+  if ( ! gotCallFromNumber ) {
+    // Extract phone number that is calling us. Example response -> +CLIP: "0123456789",129,,,,0
+    byte idx = 8 ;
+    char nextChar ;
+    String receiveCallNumber = "" ;
+    while ( ( nextChar = gsmSerialBuffer [ idx ++ ] ) != '"' && nextChar != 0 ) {
+      receiveCallNumber += nextChar ;
+    }
+    if ( receiveCallNumber.length() > 0 ) {
+      callFromNumber = receiveCallNumber ;
+      DrawIncomingCallNumber() ;
+    }
+    gotCallFromNumber = true ;
+  }
 }
 
 // Make Call related functions
