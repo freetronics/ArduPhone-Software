@@ -43,12 +43,18 @@ const Colour SEND_SMS_FG_COLOUR  = YELLOW;
 const Colour SEND_SMS_BG_COLOUR  = GREEN;
 const Colour SEND_SMS_KEY_COLOUR = DARKGREEN;
 const unsigned int SEND_SMS_DISPLAY_RESULT_DELAY = 2000 ; // How long to wait after displaying result
+// Receive SMS values
+const Colour RCV_SMS_FG_COLOUR  = WHITE;
+const Colour RCV_SMS_BG_COLOUR  = NAVY;
+const Colour RCV_SMS_KEY_COLOUR = DARKGREEN;
 
 
 // === States ===
 
 // uiStates enum moved to ui.h due to Arduino IDE limitation when enum used as function parameter
+
 uiStates uiState, returnNumState ;
+
 enum receiveCallStates {
   RC_WAITING_FOR_ACCEPT,
   RC_WAITING_FOR_MODEM,
@@ -56,6 +62,7 @@ enum receiveCallStates {
   RC_HUNG_UP
 } ;
 receiveCallStates receiveCallState ;
+
 enum makeCallStates {
     /// MakeCall states
   MC_DRAW_CALLING_NUMBER,
@@ -82,6 +89,13 @@ enum makeSMSStates {
 } ;
 makeSMSStates makeSMSState ;
 
+enum receiveSMSStates {
+  RS_WAITING_FOR_TEXT,
+  RS_DRAW_SMS,
+  RS_WAITING_FOR_DONE,
+  RS_DONE_SELECTED
+} ;
+receiveSMSStates receiveSMSState ;
 
 // === Variables ===
 
@@ -136,6 +150,8 @@ byte phoneNumBufferIndex ;
 unsigned char smsBufferIndex;
 boolean phoneNumberEntered = false ;
 boolean smsEntered = false ;
+String receivedSMSNumber ;
+String receivedSMSText ;
 
 // === Functions ===
 
@@ -152,10 +168,6 @@ void ProcessIncomingCall() {
   uiState = UI_RCV_CALL ;
   callFromNumber = "Unknown" ;
   gotCallFromNumber = false ;
-
-  // Process gsm buffer string to get incoming number
-  // TODO - need AT init commands in gsm setup to present caller ID
-  // TODO - need to extract caller ID from 'RING' message in gsmSerialBuffer
 
   if ( screenState == screen_POWER_OFF ) {
     TurnDisplayOn() ;
@@ -231,6 +243,7 @@ void ProcessReceiveCallNumber() {
 }
 
 // Make Call related functions
+
 Colour drawPhoneBgColour = MAKE_CALL_NUM_COLOUR;
 void drawPhoneNumberBuffer() {
   // Draw centered phone number with space before and after (needed incase of backspace)
@@ -425,7 +438,7 @@ void handleSendSMS()
         if ( gsmSerialBuffer.startsWith( "OK" ) )
         {
             serialDebugOut (F("Sending Phone number...\n"));
-            SendGSMSerial( F("AT + CMGS=\""));
+            SendGSMSerial( F("AT+CMGS=\""));
             // from this number
             SendGSMSerial( phoneNumBuffer );
             SendGSMSerial( F("\"\r"));
@@ -494,6 +507,78 @@ void handleSendSMS()
     } break ;
     
     }
+}
+
+void ProcessReceiveSMS() {
+  uiState = UI_RCV_SMS ;
+  
+  if ( screenState == screen_POWER_OFF ) {
+    TurnDisplayOn() ;
+  }
+  // Leave screen on for longer to allow user to view
+  nextScreenOffTime = sliceStartTime + SCREEN_POWER_OFF_DELAY * 2 ;
+
+  // Extract phone number of incoming SMS
+  receivedSMSNumber = "" ;
+  byte idx = 7 ;
+  char nextChar ;
+  while ( ( nextChar = gsmSerialBuffer [ idx ++ ] ) != '"' && nextChar != 0 ) {
+    receivedSMSNumber += nextChar ;
+  }
+
+  // Start to bulid message for screen
+  receivedSMSText = "SMS:" + receivedSMSNumber + "\n" ;
+  
+  // Need to wait for text body of message to be received
+  receiveSMSState = RS_WAITING_FOR_TEXT ;
+}
+
+void handleReceiveSMSTextBody() {
+  receivedSMSText += gsmSerialBuffer + "\n" ;
+}
+
+void handleReceiveSMSTextBodyFinished() {
+  receiveSMSState = RS_DRAW_SMS ; // Let UI know we can now display the message
+}
+
+void handleReceiveSMS() {
+  switch ( receiveSMSState ) {
+
+    case RS_WAITING_FOR_TEXT :
+      // Waiting for the text body of the message to be received
+      // Will come on one or more lines and be terminated with an empty line
+      // This will be moved to next state by gsm serial handling
+      break ;
+
+    case RS_DRAW_SMS :
+      // The text body of the message has been received, display it all and 'Done' menu item
+
+      oled.drawFilledBox( MF_MIN_X, MF_MIN_Y, MF_MAX_X, MF_MAX_Y, RCV_SMS_BG_COLOUR ) ;
+      oled.selectFont( Arial_Black_16 ) ;
+      oled.drawString( 50, MF_MIN_Y, F("Done"), RCV_SMS_KEY_COLOUR, RCV_SMS_BG_COLOUR ) ;
+      ScreenPrint( & receivedSMSText [ 0 ] ) ;
+      serialDebugOut ( F("Draw SMS -> ") );
+      serialDebugOut ( receivedSMSText );
+      serialDebugOut ( F("\n") );
+      
+      receiveSMSState = RS_WAITING_FOR_DONE ;
+      break ;
+
+    case RS_WAITING_FOR_DONE :
+      // Do nothing as we're waiting for user to select 'Done' after viewing SMS
+      break ;
+
+    case RS_DONE_SELECTED :
+      // User has finished viewing SMS and selected 'Done'
+      
+      // Delete all SMS messages from the SIM card so doesn't fill up???
+      // Hmm, this won't work well if multiple SMS are being received - FIXME
+      SendGSMSerial( F("AT+CMGD=1,4\r") ) ;
+      
+      // Return to main menu
+      uiState = UI_DRAW_MAIN_MENU ;
+      break ;
+  }
 }
 
 void lockKeysMenuItem() {
@@ -703,7 +788,7 @@ void handleKeyPressed( char key ) {
         }
         break ;
 
-        case UI_SEND_SMS:
+        case UI_SEND_SMS :
         {
             if ( key == 'U' ) {
                 /// up == done
@@ -735,6 +820,14 @@ void handleKeyPressed( char key ) {
             }
             drawSMSBuffer();
         } break;
+        
+      case UI_RCV_SMS :
+        if ( key == 'U' && receiveSMSState == RS_WAITING_FOR_DONE ) {
+            // up == done
+            receiveSMSState = RS_DONE_SELECTED ;
+        }
+        break ;
+      
       case UI_START_UP :
         // Abort animation and go to menu
         uiState = UI_DRAW_MAIN_MENU ;
@@ -791,6 +884,10 @@ void UISlice() {
 
     case UI_SEND_SMS :
       handleSendSMS() ;
+      break ;
+
+    case UI_RCV_SMS :
+      handleReceiveSMS() ;
       break ;
 
     case UI_LOCK_KEYS :

@@ -16,5 +16,6 @@ enum uiStates {
   UI_GET_PHONE_NUM,
   UI_CREATE_SMS,
   UI_LOCK_KEYS,
-  UI_RCV_CALL
+  UI_RCV_CALL,
+  UI_RCV_SMS
 } ;

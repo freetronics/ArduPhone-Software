@@ -92,6 +92,7 @@ implemented in roughly the following order:
  * Send SMS now includes upper AND lower case as well as further status
    messages
  * Receive call now shows incoming number if available
+ * Receive / display single SMS at a time - no storage
  
 To do
 -----
@@ -100,7 +101,6 @@ implemented:
 
  * Basic sound alerts on buzzer - incoming call or SMS
  * Lock / unlock keypad
- * Receive / display SMS at time - no storage
  * Create phone book entry - save on SIM
  * Initiate call from phone book
  * Delete phone book entry - delete from SIM

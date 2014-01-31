@@ -15,7 +15,7 @@ const byte GSM_PIN_NET_OK    = 20 ;
 const byte GSM_PIN_DSR_CTS   = 21 ;
 const byte GSM_PIN_SENSE_1V8 = 22 ;
 const int  GSM_BAUD_RATE = 9600 ;
-const byte GSM_SERIAL_BUF_SIZE = 128 ;
+const byte GSM_SERIAL_BUF_SIZE = 150 ; // SMS can be up to 140 chars long
 
 // === States ===
 // State machine on this module for time slices
@@ -50,7 +50,8 @@ enum gsmSerialStates {
   gsms_IDLE,
   gsms_ENQ_SIGNAL_STATUS,
   gsms_DIALLING,
-  gsms_INCOMING_CALL
+  gsms_INCOMING_CALL,
+  gsms_RCV_SMS_TEXT
 } ;
 gsmSerialStates gsmSerialState ;
 
@@ -64,19 +65,24 @@ boolean gotOperatorName = false ;
 String operatorName = "", operatorDisplayedName = "" ;
 boolean gsmOKResponse = false ;
 // Variables related to initialising the modem with AT commends
-const char initModem0[] PROGMEM = "ATE0\r";
-const char initModem1[] PROGMEM = "AT+COPS=1,0\r";
-const char initModem2[] PROGMEM = "AT+CLIP=1\r";
-const char initModem3[] PROGMEM = "AT&W\r";
-const byte INIT_MODEM_NUM_ITEMS = 4 ;
+const char initModem0[] PROGMEM = "ATE0\r"; // Turn off local echo (as interferes with call handling)
+const char initModem1[] PROGMEM = "AT+COPS=1,0\r"; // Turn on display of operator name in text (will return ERROR if already set??)
+const char initModem2[] PROGMEM = "AT+CLIP=1\r"; // Turn on incoming caller number display
+const char initModem3[] PROGMEM = "AT+CMGF=1\r"; // Set SMS mode to text
+const char initModem4[] PROGMEM = "AT+CNMI=2,2,0,0,0\r"; // Output SMS messages as soon as received
+const char initModem5[] PROGMEM = "AT&W\r"; // Write current settings to GSM module for next time
+const byte INIT_MODEM_NUM_ITEMS = 6 ;
 const byte INIT_MODEM_TEXT_BUF_LEN = 40 ;
 const char * const init_modem_table[] PROGMEM = {
   initModem0,
   initModem1,
   initModem2,
-  initModem3
+  initModem3,
+  initModem4,
+  initModem5
 } ;
 byte initModemIndex = 0 ;
+boolean gotSMSTextBody = false ;
 
 // === Functions ===
 
@@ -187,7 +193,7 @@ void ReadGSMSerial() {
     char inByte = Serial1.read() ;
 
     if ( inByte == 10 || inByte == 13 || gsmSerialBufferIndex == GSM_SERIAL_BUF_SIZE - 1 ) {
-      // We have a end of line or full buffer, process it
+      // We have an end of line or full buffer, process it
 
       if ( gsmSerialBufferIndex > 0 ) {
         // DEBUG - BEGIN
@@ -224,6 +230,12 @@ void ReadGSMSerial() {
               ProcessReceiveCallNumber() ;
             }
             break ;
+            
+          case gsms_RCV_SMS_TEXT :
+            // Keep appending text to body of message
+            handleReceiveSMSTextBody() ;
+            gotSMSTextBody = true ;
+            break ;
 
           case gsms_IDLE :
             // Drop through to default...
@@ -233,6 +245,10 @@ void ReadGSMSerial() {
             if ( gsmSerialBuffer.startsWith( "RING" ) ) {
               ProcessIncomingCall() ;
               gsmSerialState = gsms_INCOMING_CALL ;
+            } else if ( gsmSerialBuffer.startsWith( "+CMT:" ) ) {
+              ProcessReceiveSMS() ;
+              gotSMSTextBody = false ;
+              gsmSerialState = gsms_RCV_SMS_TEXT ;
             }
         }
 
@@ -245,8 +261,14 @@ void ReadGSMSerial() {
         // Clear the input buffer
         gsmSerialBuffer = "" ;
         gsmSerialBufferIndex = 0 ;
+      } else { // Serial buffer received was empty line
+        if ( gsmSerialState == gsms_RCV_SMS_TEXT && gotSMSTextBody == true ) {
+          // Empty line received, so end of text for SMS message
+          handleReceiveSMSTextBodyFinished() ; // Let UI know we can now display the message
+          gsmSerialState = gsms_IDLE ; // Finished waiting for sms message, so return to idle
+        }
       }
-    } else {
+    } else { // Not end of line or buffer
       // Add byte to buffer
       gsmSerialBuffer += inByte ;
       gsmSerialBufferIndex ++ ;
