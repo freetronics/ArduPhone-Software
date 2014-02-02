@@ -87,4 +87,11 @@ Some of the examples require external libraries, as linked above.
  * ArduPhoneSerialProxyOLED: Same as the ArduPhoneSerialProxy example,
    but also displays messages sent and received on the OLED display.
  * ArduPhoneSetGSMBaudRate: Used to set the default baud rate the GSM 
-   module communicates with. 
+   module communicates with.
+
+firmware_v1
+-----------
+This folder contains the firmware that allows you to use an ArduPhone as a
+basic mobile/cell phone. It also shows how most of the hardware is used
+to combine the various examples into a working phone.
+ 
